@@ -43,8 +43,9 @@ public class RoleAssignmentService
     {
         var userModel = GetVatusaUserInfo(User.Id).Result;
         var artccStaffRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "ARTCC STAFF");
-        var guestRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "VERIFIED");
+        var verifiedRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "VERIFIED");
         var rolesChannel = User.Guild.Channels.FirstOrDefault(x => x.Name == "assign-my-roles");
+        string newNickname = "";
 
         if (userModel == null)
         {
@@ -56,16 +57,16 @@ public class RoleAssignmentService
 
         if (hasArtccStaffRole(userModel))
         {
-            if (User.Roles.Contains(guestRole))
+            if (User.Roles.Contains(verifiedRole))
             {
-                await User.RemoveRoleAsync(guestRole);
-                _logger.LogInformation($"Remove Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Removed {guestRole?.Name} role from user.");
+                await User.RemoveRoleAsync(verifiedRole);
+                _logger.LogInformation($"Remove Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Removed {verifiedRole?.Name} role from user.");
             };
-
-            if (User.Roles.Contains(artccStaffRole)) return;
 
             await User.AddRoleAsync(artccStaffRole);
             _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
+
+            newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility} {userModel.data.roles[0].role}";
         }
         else
         {
@@ -75,11 +76,13 @@ public class RoleAssignmentService
                 _logger.LogInformation($"Remove Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user is no longer staff; Removed {artccStaffRole?.Name} role from user.");
             };
 
-            if (User.Roles.Contains(guestRole)) return;
+            await User.AddRoleAsync(verifiedRole);
+            _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
 
-            await User.AddRoleAsync(guestRole);
-            _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {guestRole?.Name} role to user.");
+            newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility}";
         }
+        
+        await User.ModifyAsync(u => u.Nickname = newNickname);
     }
 
     private async Task<VatusaUserData?> GetVatusaUserInfo(ulong MemberId)
