@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,4 +35,17 @@ public class OwnerCommands : ModuleBase
     }
 
     // Bot Owner Only Commands go here.
+
+    [Command("show-count", RunMode = RunMode.Async), Name("Show-Count"), Summary("Display how many servers this bot is currently in"), Alias("show-server-count")]
+    public async Task ServerCount()
+    {
+        IReadOnlyCollection<IGuild> guildNumber = await Context.Client.GetGuildsAsync();
+        await ReplyAsync($"I am connected to {guildNumber.Count()} guilds!");
+    }
+
+    [Command("set-status", RunMode = RunMode.Async), Name("Set-Status"), Summary("Sets the status for the bot.")]
+    public async Task SetStatus([Remainder] string? args = null)
+    {
+        await _discord.SetGameAsync(args);
+    }
 }
