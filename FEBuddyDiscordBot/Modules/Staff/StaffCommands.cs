@@ -1,4 +1,5 @@
-﻿using Discord.Commands;
+﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,7 @@ namespace FEBuddyDiscordBot.Modules.Staff;
 
 [Name("Staff Commands")]
 [Summary("These commands are to assist the Staff of the server.")]
-[RequireUserPermission(Discord.GuildPermission.Administrator)]
+[RequireUserPermission(GuildPermission.ManageMessages | GuildPermission.ManageChannels)]
 public class StaffCommands : ModuleBase
 {
     private readonly IServiceProvider _services;
