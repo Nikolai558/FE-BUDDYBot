@@ -34,15 +34,6 @@ public class UserCommands : ModuleBase
     [Command("give-roles", RunMode = RunMode.Async), Alias(new string[] {"gr", "give-role", "assign-roles", "assign-role" }), Name("Give-Roles"), Summary("Give Discord Server Roles Depending on VATUSA Status.")]
     public async Task AssignRoles()
     {
-        // User joins, No roles
-        // User uses command "give-roles"
-        //      Bot then looks up user by discord ID in Vatusa API
-        //      If user is Staff Member -> "ARTCC Staff" Role is assigned
-        //      Else -> Guest is assigned
-        // Rest of the Roles are Manually Assigned.
-
-        // https://api.vatusa.net/v2/user/{cid}
-        // https://api.vatusa.net/v2/user/{discordId}?d
         if (Context.Channel is IGuildChannel)
         {
             await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User);
