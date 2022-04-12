@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <Folder Include="Modules\Testing\" />
-    <Folder Include="Modules\Users\" />
   </ItemGroup>
 
   <ItemGroup>
