@@ -8,7 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Modules\" />
+    <Folder Include="Modules\Testing\" />
+    <Folder Include="Modules\Users\" />
+    <Folder Include="Modules\Staff\" />
+    <Folder Include="Modules\Owner\" />
   </ItemGroup>
 
   <ItemGroup>
