@@ -40,7 +40,14 @@ public class OwnerCommands : ModuleBase
     public async Task ServerCount()
     {
         IReadOnlyCollection<IGuild> guildNumber = await Context.Client.GetGuildsAsync();
-        await ReplyAsync($"I am connected to {guildNumber.Count()} guilds!");
+        if (guildNumber.Count() > 1)
+        {
+            await ReplyAsync($"I am connected to {guildNumber.Count()} guild!");
+        }
+        else
+        {
+            await ReplyAsync($"I am connected to {guildNumber.Count()} guilds!");
+        }
     }
 
     [Command("set-status", RunMode = RunMode.Async), Name("Set-Status"), Summary("Sets the status for the bot.")]
