@@ -10,6 +10,7 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,13 +24,16 @@ public class FeBuddyBot
         var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "config.json");
         _config = _builder.Build();
 
+        var intents = Discord.GatewayIntents.All;
+
         var services = new ServiceCollection()
-            .AddSingleton(new DiscordSocketClient())
+            .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = intents}))
             .AddSingleton(_config)
             .AddSingleton(new CommandService(new CommandServiceConfig { DefaultRunMode = RunMode.Async, LogLevel = LogSeverity.Debug, CaseSensitiveCommands = false, ThrowOnError = false }))
             .AddSingleton<StartupService>()
             .AddSingleton<LoggingService>()
-            .AddSingleton<CommandHandler>();
+            .AddSingleton<CommandHandler>()
+            .AddSingleton<RoleAssignmentService>();
 
         ConfigureServices(services);
 
@@ -40,6 +44,8 @@ public class FeBuddyBot
         await serviceProvider.GetRequiredService<StartupService>().StartAsync();
 
         serviceProvider.GetRequiredService<CommandHandler>();
+
+        serviceProvider.GetRequiredService<RoleAssignmentService>();
 
         await Task.Delay(-1);
     }

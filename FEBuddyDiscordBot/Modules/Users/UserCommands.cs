@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -44,12 +45,13 @@ public class UserCommands : ModuleBase
         // https://api.vatusa.net/v2/user/{discordId}?d
         if (Context.Channel is IGuildChannel)
         {
-            await ReplyAsync("This command is still being developed. Please try again at a later time. \nFor now, please enjoy this Guest Role.");
-            await ((IGuildUser)Context.User).AddRoleAsync(Context.Guild.Roles.FirstOrDefault(x => x.Name == "Guest"));
+            await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User);
+            //await ReplyAsync("This command is still being developed. Please try again at a later time. \nFor now, please enjoy this Guest Role.");
         }
         else
         {
-            await ReplyAsync("I can not assign you roles inside of a Direct Message. Please go to the appropriate server channel and use the command again.");
+            await ReplyAsync("I can not assign you roles inside of a Direct Message. Please go to the appropriate server channel and use the command again." +
+                "\nListen... The messages you send me will always remain between just you and I... This is because I am your buddy, and it is important that friends keep secrets... but mostly because I'm not real and nobody is monitoring these messages. \n\n(private message and admin of the discord to get appropriate roles assigned or... (VATUSA stuff))");
         }
     }
 }
