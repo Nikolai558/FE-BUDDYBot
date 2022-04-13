@@ -29,8 +29,29 @@ public class RoleAssignmentService
         _logger = _services.GetRequiredService<ILogger<RoleAssignmentService>>();
 
         _discord.UserJoined += UserJoined;
+        _discord.UserVoiceStateUpdated += UserConnectedToVoice;
 
         _logger.LogInformation("Loaded: RoleAssignmentService");
+    }
+
+    private async Task UserConnectedToVoice(SocketUser User, SocketVoiceState CurrentVoiceState, SocketVoiceState NewVoiceState)
+    {
+        SocketGuildUser _user = (SocketGuildUser)User;
+
+        SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
+        string privateMeetingVoiceChnlName = "Private Meeting";
+
+        if (CurrentVoiceState.VoiceChannel != null && CurrentVoiceState.VoiceChannel.Name == privateMeetingVoiceChnlName)
+        {
+            await _user.RemoveRoleAsync(voiceMeetingTextRole);
+            _logger.LogInformation($"Remove Role: {_user.Username} ({_user.Id}) in {_user.Guild.Name} -> User is no longer connected to {privateMeetingVoiceChnlName} Voice Channel; Removed the {voiceMeetingTextRole.Name} role.");
+        }
+
+        if (NewVoiceState.VoiceChannel != null && NewVoiceState.VoiceChannel.Name == privateMeetingVoiceChnlName)
+        {
+            await _user.AddRoleAsync(voiceMeetingTextRole);
+            _logger.LogInformation($"Give Role: {_user.Username} ({_user.Id}) in {_user.Guild.Name} -> User Connected to {privateMeetingVoiceChnlName} Voice Channel; Added the {voiceMeetingTextRole.Name} role");
+        }
     }
 
     private async Task UserJoined(SocketGuildUser User)

@@ -24,10 +24,14 @@ public class FeBuddyBot
         var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "config.json");
         _config = _builder.Build();
 
-        var intents = Discord.GatewayIntents.All;
+        DiscordSocketConfig discordConfig = new DiscordSocketConfig()
+        {
+            
+            GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
+        };
 
         var services = new ServiceCollection()
-            .AddSingleton(new DiscordSocketClient(new DiscordSocketConfig { GatewayIntents = intents}))
+            .AddSingleton(new DiscordSocketClient(discordConfig))
             .AddSingleton(_config)
             .AddSingleton(new CommandService(new CommandServiceConfig { DefaultRunMode = RunMode.Async, LogLevel = LogSeverity.Debug, CaseSensitiveCommands = false, ThrowOnError = false }))
             .AddSingleton<StartupService>()
