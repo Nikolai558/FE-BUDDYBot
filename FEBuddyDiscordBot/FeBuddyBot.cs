@@ -26,7 +26,8 @@ public class FeBuddyBot
 
         DiscordSocketConfig discordConfig = new DiscordSocketConfig()
         {
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
+            
+            GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
         };
 
         var services = new ServiceCollection()
