@@ -62,8 +62,6 @@ public class RoleAssignmentService
         SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "ARTCC STAFF");
         SocketRole verifiedRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "VERIFIED");
         SocketGuildChannel rolesChannel = User.Guild.Channels.First(x => x.Name == "assign-my-roles");
-        
-        string newNickname = "";
 
         if (userModel == null && SendDM_OnVatusaNotFound)
         {
@@ -88,13 +86,17 @@ public class RoleAssignmentService
             await User.AddRoleAsync(artccStaffRole);
             _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
         }
-        
-        newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility}";
+
+        await ChangeNickname(User, userModel);
+    }
+
+    private async Task ChangeNickname(SocketGuildUser User, VatusaUserData UserData)
+    {
+        string newNickname = $"{UserData.data.fname} {UserData.data.lname} | {UserData.data.facility}";
 
         if (User.Nickname.Contains('|'))
         {
-            string currentUserNickname = User.Nickname;
-            newNickname = currentUserNickname[..currentUserNickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
+            newNickname = User.Nickname[..User.Nickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
         }
 
         try
