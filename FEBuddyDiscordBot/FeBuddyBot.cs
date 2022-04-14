@@ -8,14 +8,12 @@ using Serilog.Events;
 namespace FEBuddyDiscordBot;
 public class FeBuddyBot
 {
-    private static IConfigurationRoot _config;
+    private static IConfiguration _config;
 
     public async Task StartAsync()
     {
-        var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "config.json");
+        var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "appsettings.json");
         _config = _builder.Build();
-
-        VerifyConfigItems();
 
         DiscordSocketConfig discordConfig = new DiscordSocketConfig()
         {
@@ -53,7 +51,7 @@ public class FeBuddyBot
 
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>();
 
-        string logLevel = _config["logLevel"];
+        string logLevel = _config.GetRequiredSection("Logging").GetRequiredSection("LogLevel").Value;
         LogEventLevel level = LogEventLevel.Error;
 
         if (!string.IsNullOrEmpty(logLevel))
@@ -74,23 +72,5 @@ public class FeBuddyBot
             .WriteTo.Console()
             .MinimumLevel.Is(level)
             .CreateLogger();
-    }
-
-    private void VerifyConfigItems()
-    {
-        string[] RequiredConfigItems = new List<string>() 
-        {
-            "token",
-            "prefix",
-            "logLevel"
-        }.ToArray();
-
-        foreach (string requiredConfigKey in RequiredConfigItems)
-        {
-            if (string.IsNullOrEmpty(_config[requiredConfigKey]) || string.IsNullOrWhiteSpace(_config[requiredConfigKey]))
-            {
-                throw new Exception($"Required Config Item '{requiredConfigKey}' is missing.");
-            }
-        }
     }
 }

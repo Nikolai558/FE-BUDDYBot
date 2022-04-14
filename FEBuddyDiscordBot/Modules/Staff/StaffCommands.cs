@@ -6,18 +6,16 @@
 public class StaffCommands : ModuleBase
 {
     private readonly IServiceProvider _services;
-    private readonly IConfigurationRoot _config;
+    private readonly IConfiguration _config;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
-    private readonly string _prefix;
 
     public StaffCommands(IServiceProvider services)
     {
         _services = services;
-        _config = _services.GetRequiredService<IConfigurationRoot>();
+        _config = _services.GetRequiredService<IConfiguration>();
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<StaffCommands>>();
-        _prefix = _config["prefix"];
 
         _logger.LogInformation("Module: Loaded StaffCommands");
     }
