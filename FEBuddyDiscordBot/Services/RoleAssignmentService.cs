@@ -74,9 +74,14 @@ public class RoleAssignmentService
 
         if (userModel == null && sendDMOnVATUSAError)
         {
-            // Todo send Not found in Vatusa embed instructions.
-            await User.CreateDMChannelAsync().Result.SendMessageAsync($"You may link your account Discord account to the VATUSA Discord server here: https://vatusa.net/my/profile. Once complete, simply type the following into the FE-Buddy <#{rolesChannel.Id}> channel and your nickname and roles will be assigned appropriately: ```!Give-Role```");
-            _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Not found in VATUSA, no roles were assigned.");
+            string linkInstructions = 
+                "Hello, I am an automated program that is here to help you get your FE-Buddy Discord permissions/roles setup.\n\n" +
+                "To do this, I need you to sync your Discord account with the VATUSA Discord server; You may do this by going to your VATUSA profile https://vatusa.net/my/profile > “VATUSA Discord Link”.\n\n" +
+                $"When you are complete, join a voice channel or go to the FE-Buddy Discord <#{rolesChannel.Id}> channel and complete the `!GR` command.\n\n" +
+                "If you are unable to do this, please private message one of the Administrators of the discord.";
+
+            await User.CreateDMChannelAsync().Result.SendMessageAsync(linkInstructions);
+            _logger.LogInformation($"No Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Not found in VATUSA, no roles were assigned.");
             return;
         }
 
