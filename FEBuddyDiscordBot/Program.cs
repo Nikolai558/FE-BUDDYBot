@@ -1,6 +1,5 @@
 ﻿namespace FEBuddyDiscordBot;
 
-
 class Program
 {
     public static void Main(string[] args)

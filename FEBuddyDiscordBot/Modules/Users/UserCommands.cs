@@ -1,10 +1,4 @@
-﻿using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
-using FEBuddyDiscordBot.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+﻿using FEBuddyDiscordBot.Services;
 
 namespace FEBuddyDiscordBot.Modules.Users;
 
@@ -37,7 +31,6 @@ public class UserCommands : ModuleBase
         if (Context.Channel is IGuildChannel)
         {
             await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User);
-            //await ReplyAsync("This command is still being developed. Please try again at a later time. \nFor now, please enjoy this Guest Role.");
         }
         else
         {
