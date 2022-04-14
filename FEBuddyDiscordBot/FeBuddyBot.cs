@@ -1,18 +1,7 @@
-﻿using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
-using FEBuddyDiscordBot.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using Serilog;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot;
 public class FeBuddyBot
@@ -26,7 +15,6 @@ public class FeBuddyBot
 
         DiscordSocketConfig discordConfig = new DiscordSocketConfig()
         {
-            
             GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
         };
 

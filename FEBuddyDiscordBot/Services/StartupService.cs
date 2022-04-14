@@ -1,9 +1,4 @@
-﻿using Discord.Commands;
-using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace FEBuddyDiscordBot.Services;
 public class StartupService

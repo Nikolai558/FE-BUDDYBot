@@ -1,16 +1,5 @@
-﻿using Discord;
-using Discord.WebSocket;
-using FEBuddyDiscordBot.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
+﻿using System.Net;
 using System.Text.Json;
-using System.Threading.Tasks;
 using static FEBuddyDiscordBot.Models.VatusaUserModel;
 
 namespace FEBuddyDiscordBot.Services;
@@ -134,13 +123,7 @@ public class RoleAssignmentService
         {
             return true;
         }
-        //foreach (StaffRole role in userData.data.roles)
-        //{
-        //    if (new string[] {"ATM", "DATM", "FE"}.Contains(role.role))
-        //    {
-        //        return true;
-        //    }
-        //}
+
         return false;
     }
 }

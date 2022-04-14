@@ -1,11 +1,4 @@
-﻿using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
-namespace FEBuddyDiscordBot.Modules.Staff;
+﻿namespace FEBuddyDiscordBot.Modules.Staff;
 
 [Name("Staff Commands")]
 [Summary("These commands are to assist the Staff of the server.")]
