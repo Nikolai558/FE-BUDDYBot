@@ -20,9 +20,12 @@ public class StartupService
         _logger.LogInformation("Loaded: StartupService");
     }
 
-    public async Task StartAsync()
+    public async Task StartAsync(bool UseDevToken)
     {
-        string token = _config["Token"];
+        string? token = null;
+
+        if (UseDevToken) token = _config["devToken"]; 
+        if (UseDevToken == false) token = _config["token"];
 
         if (string.IsNullOrEmpty(token) || string.IsNullOrWhiteSpace(token))
         {

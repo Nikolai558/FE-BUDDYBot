@@ -38,7 +38,7 @@ public class FeBuddyBot
 
         serviceProvider.GetRequiredService<LoggingService>();
 
-        await serviceProvider.GetRequiredService<StartupService>().StartAsync();
+        await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
 
         serviceProvider.GetRequiredService<CommandHandler>();
 
