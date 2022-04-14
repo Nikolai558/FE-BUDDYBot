@@ -1,7 +1,7 @@
 version: '3.4'
 services:
   febuddybot:
-    image: febuddybot:1.1.1-alpha
+    image: febuddybot:1.2.0-alpha
     container_name: febuddybot
     restart: unless-stopped
     depends_on:
