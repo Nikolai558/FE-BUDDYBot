@@ -13,7 +13,11 @@ public class FeBuddyBot
 
     public async Task StartAsync()
     {
-        var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "appsettings.json");
+        var _builder = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile(path: "appsettings.json")
+            .AddUserSecrets<Program>();
+
         _config = _builder.Build();
 
         DiscordSocketConfig discordConfig = new DiscordSocketConfig()
