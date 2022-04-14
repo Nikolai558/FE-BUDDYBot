@@ -1,5 +1,4 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using FEBuddyDiscordBot.DataAccess;
 using static FEBuddyDiscordBot.Models.VatusaUserModel;
 
 namespace FEBuddyDiscordBot.Services;
@@ -9,6 +8,7 @@ public class RoleAssignmentService
     private readonly IConfigurationRoot _config;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
+    private readonly VatusaApi _vatusaApi;
 
     public RoleAssignmentService(IServiceProvider services)
     {
@@ -16,6 +16,7 @@ public class RoleAssignmentService
         _config = _services.GetRequiredService<IConfigurationRoot>();
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<RoleAssignmentService>>();
+        _vatusaApi = _services.GetRequiredService<VatusaApi>();
 
         _discord.UserJoined += UserJoined;
         _discord.UserVoiceStateUpdated += UserConnectedToVoice;
@@ -55,7 +56,7 @@ public class RoleAssignmentService
 
     public async Task GiveRole(SocketGuildUser User, bool sendDMOnVATUSAError = true)
     {
-        var userModel = GetVatusaUserInfo(User.Id).Result;
+        var userModel = await _vatusaApi.GetVatusaUserInfo(User.Id);
         var artccStaffRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "ARTCC STAFF");
         var verifiedRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "VERIFIED");
         var rolesChannel = User.Guild.Channels.FirstOrDefault(x => x.Name == "assign-my-roles");
@@ -94,25 +95,6 @@ public class RoleAssignmentService
         }
 
         await User.ModifyAsync(u => u.Nickname = newNickname);
-    }
-
-    private async Task<VatusaUserData?> GetVatusaUserInfo(ulong MemberId)
-    {
-        string url = $"https://api.vatusa.net/v2/user/{MemberId}?d";
-
-        using (WebClient webClient = new WebClient())
-        {
-            try
-            {
-                string jsonResponse = await webClient.DownloadStringTaskAsync(url);
-                VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(jsonResponse);
-                return userData;
-            }
-            catch (WebException)
-            {
-                return null;
-            }
-        }
     }
 
     private bool hasArtccStaffRole(VatusaUserData userData)

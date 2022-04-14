@@ -1,4 +1,5 @@
-﻿using FEBuddyDiscordBot.Services;
+﻿using FEBuddyDiscordBot.DataAccess;
+using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using Serilog;
@@ -25,7 +26,8 @@ public class FeBuddyBot
             .AddSingleton<StartupService>()
             .AddSingleton<LoggingService>()
             .AddSingleton<CommandHandler>()
-            .AddSingleton<RoleAssignmentService>();
+            .AddSingleton<RoleAssignmentService>()
+            .AddSingleton<VatusaApi>();
 
         ConfigureServices(services);
 
