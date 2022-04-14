@@ -54,18 +54,21 @@ public class RoleAssignmentService
         await GiveRole(User);
     }
 
-    public async Task GiveRole(SocketGuildUser User, bool sendDMOnVATUSAError = true)
+    public async Task GiveRole(SocketGuildUser User, bool SendDM_OnVatusaNotFound = true)
     {
-        var userModel = await _vatusaApi.GetVatusaUserInfo(User.Id);
-        var artccStaffRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "ARTCC STAFF");
-        var verifiedRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "VERIFIED");
-        var rolesChannel = User.Guild.Channels.FirstOrDefault(x => x.Name == "assign-my-roles");
+        VatusaUserData? userModel = await _vatusaApi.GetVatusaUserInfo(User.Id);
+        
+        string guildName = User.Guild.Name;
+        SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "ARTCC STAFF");
+        SocketRole verifiedRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "VERIFIED");
+        SocketGuildChannel rolesChannel = User.Guild.Channels.First(x => x.Name == "assign-my-roles");
+        
         string newNickname = "";
 
-        if (userModel == null && sendDMOnVATUSAError)
+        if (userModel == null && SendDM_OnVatusaNotFound)
         {
             string linkInstructions = 
-                "Hello, I am an automated program that is here to help you get your FE-Buddy Discord permissions/roles setup.\n\n" +
+                $"Hello, I am an automated program that is here to help you get your {guildName} Discord permissions/roles setup.\n\n" +
                 "To do this, I need you to sync your Discord account with the VATUSA Discord server; You may do this by going to your VATUSA profile https://vatusa.net/my/profile > “VATUSA Discord Link”.\n\n" +
                 $"When you are complete, join a voice channel or go to the FE-Buddy Discord <#{rolesChannel.Id}> channel and complete the `!GR` command.\n\n" +
                 "If you are unable to do this, please private message one of the Administrators of the discord.";
@@ -94,7 +97,19 @@ public class RoleAssignmentService
             newNickname = currentUserNickname[..currentUserNickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
         }
 
-        await User.ModifyAsync(u => u.Nickname = newNickname);
+        try
+        {
+            await User.ModifyAsync(u => u.Nickname = newNickname);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Missing Permissions"))
+            {
+                _logger.LogWarning($"Missing Permissions: Could not change Nickname for {User.Username} ({User.Id}) in {guildName}");
+                return;
+            }
+            throw;
+        }
     }
 
     private bool hasArtccStaffRole(VatusaUserData userData)
