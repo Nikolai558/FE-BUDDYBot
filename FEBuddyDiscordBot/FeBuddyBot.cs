@@ -1,4 +1,5 @@
 ﻿using FEBuddyDiscordBot.DataAccess;
+using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
@@ -28,7 +29,8 @@ public class FeBuddyBot
             .AddSingleton<LoggingService>()
             .AddSingleton<CommandHandler>()
             .AddSingleton<RoleAssignmentService>()
-            .AddSingleton<VatusaApi>();
+            .AddSingleton<VatusaApi>()
+            .AddSingleton<IMongoDbConnection, MongoDbConnection>();
 
         ConfigureServices(services);
 
