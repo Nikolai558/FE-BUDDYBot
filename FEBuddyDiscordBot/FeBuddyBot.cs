@@ -3,6 +3,7 @@ using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using Serilog;
+using Serilog.Events;
 
 namespace FEBuddyDiscordBot;
 public class FeBuddyBot
@@ -13,6 +14,8 @@ public class FeBuddyBot
     {
         var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "config.json");
         _config = _builder.Build();
+
+        VerifyConfigItems();
 
         DiscordSocketConfig discordConfig = new DiscordSocketConfig()
         {
@@ -50,19 +53,19 @@ public class FeBuddyBot
 
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>();
 
-        var logLevel = _config["logLevel"];
-        var level = Serilog.Events.LogEventLevel.Error;
+        string logLevel = _config["logLevel"];
+        LogEventLevel level = LogEventLevel.Error;
 
         if (!string.IsNullOrEmpty(logLevel))
         {
             switch (logLevel.ToLower())
             {
-                case "error": { level = Serilog.Events.LogEventLevel.Error; break; }
-                case "info": { level = Serilog.Events.LogEventLevel.Information; break; }
-                case "debug": { level = Serilog.Events.LogEventLevel.Debug; break; }
-                case "crit": { level = Serilog.Events.LogEventLevel.Fatal; break; }
-                case "warn": { level = Serilog.Events.LogEventLevel.Warning; break; }
-                case "trace": { level = Serilog.Events.LogEventLevel.Debug; break; }
+                case "error": { level = LogEventLevel.Error; break; }
+                case "info": { level = LogEventLevel.Information; break; }
+                case "debug": { level = LogEventLevel.Debug; break; }
+                case "crit": { level = LogEventLevel.Fatal; break; }
+                case "warn": { level = LogEventLevel.Warning; break; }
+                case "trace": { level = LogEventLevel.Debug; break; }
             }
         }
 
@@ -71,5 +74,23 @@ public class FeBuddyBot
             .WriteTo.Console()
             .MinimumLevel.Is(level)
             .CreateLogger();
+    }
+
+    private void VerifyConfigItems()
+    {
+        string[] RequiredConfigItems = new List<string>() 
+        {
+            "token",
+            "prefix",
+            "logLevel"
+        }.ToArray();
+
+        foreach (string requiredConfigKey in RequiredConfigItems)
+        {
+            if (string.IsNullOrEmpty(_config[requiredConfigKey]) || string.IsNullOrWhiteSpace(_config[requiredConfigKey]))
+            {
+                throw new Exception($"Required Config Item '{requiredConfigKey}' is missing.");
+            }
+        }
     }
 }
