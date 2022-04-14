@@ -101,13 +101,14 @@ public class RoleAssignmentService
 
         try
         {
+            _logger.LogInformation($"Nickname: Changing {User.Username} ({User.Id}) nickname -> from {User.Nickname} to {newNickname}");
             await User.ModifyAsync(u => u.Nickname = newNickname);
         }
         catch (Exception ex)
         {
             if (ex.Message.Contains("Missing Permissions"))
             {
-                _logger.LogWarning($"Missing Permissions: Could not change Nickname for {User.Username} ({User.Id}) in {guildName}");
+                _logger.LogWarning($"Missing Permissions: Could not change Nickname for {User.Username} ({User.Id}) in {User.Guild.Name}");
                 return;
             }
             throw;
