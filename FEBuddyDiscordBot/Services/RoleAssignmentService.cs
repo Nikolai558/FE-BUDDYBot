@@ -30,7 +30,7 @@ public class RoleAssignmentService
 
         if (_user == null) return;
 
-        await GiveRole(_user, false);
+        if (NewVoiceState.VoiceChannel != null) await GiveRole(_user, false);
 
         SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
         string privateMeetingVoiceChnlName = "Private Meeting";
