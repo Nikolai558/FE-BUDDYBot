@@ -87,39 +87,23 @@ public class RoleAssignmentService
 
         if (userModel == null) return;
 
+        await User.AddRoleAsync(verifiedRole);
+        _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
+
         if (hasArtccStaffRole(userModel))
         {
-            if (User.Roles.Contains(verifiedRole))
-            {
-                await User.RemoveRoleAsync(verifiedRole);
-                _logger.LogInformation($"Remove Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Removed {verifiedRole?.Name} role from user.");
-            };
-
             await User.AddRoleAsync(artccStaffRole);
             _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
-
-            newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility} {userModel.data.roles[0].role}";
         }
-        else
-        {
-            if (User.Roles.Contains(artccStaffRole))
-            {
-                await User.RemoveRoleAsync(artccStaffRole);
-                _logger.LogInformation($"Remove Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user is no longer staff; Removed {artccStaffRole?.Name} role from user.");
-            };
-
-            await User.AddRoleAsync(verifiedRole);
-            _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
-
-            newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility}";
-        }
+        
+        newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility}";
 
         if (User.Nickname.Contains('|'))
         {
             string currentUserNickname = User.Nickname;
             newNickname = currentUserNickname[..currentUserNickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
         }
-        
+
         await User.ModifyAsync(u => u.Nickname = newNickname);
     }
 
