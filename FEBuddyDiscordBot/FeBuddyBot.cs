@@ -30,7 +30,8 @@ public class FeBuddyBot
             .AddSingleton<CommandHandler>()
             .AddSingleton<RoleAssignmentService>()
             .AddSingleton<VatusaApi>()
-            .AddSingleton<IMongoDbConnection, MongoDbConnection>();
+            .AddSingleton<IMongoDbConnection, MongoDbConnection>()
+            .AddSingleton<IMongoGuildData, MongoGuildData>();
 
         ConfigureServices(services);
 
