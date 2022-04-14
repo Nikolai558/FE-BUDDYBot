@@ -24,7 +24,7 @@ public class MongoGuildData : IMongoGuildData
 
     public async Task<GuildModel> GetGuildAsync(string id)
     {
-        var results = await _guilds.FindAsync(guild => guild.Id == id);
+        var results = await _guilds.FindAsync(guild => guild.GuildId == id);
         return results.FirstOrDefault();
     }
 
@@ -35,7 +35,7 @@ public class MongoGuildData : IMongoGuildData
 
     public Task UpdateGuild(GuildModel guild)
     {
-        var filter = Builders<GuildModel>.Filter.Eq("Id", guild.Id);
+        var filter = Builders<GuildModel>.Filter.Eq("Id", guild.GuildId);
         return _guilds.ReplaceOneAsync(filter, guild, new ReplaceOptions { IsUpsert = true });
     }
 }
