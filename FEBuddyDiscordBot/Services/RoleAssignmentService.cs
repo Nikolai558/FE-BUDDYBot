@@ -38,7 +38,7 @@ public class RoleAssignmentService
     {
         SocketGuildUser _user = (SocketGuildUser)User;
 
-        await GiveRole(_user);
+        await GiveRole(_user, false);
 
         SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
         string privateMeetingVoiceChnlName = "Private Meeting";
@@ -62,7 +62,7 @@ public class RoleAssignmentService
         await GiveRole(User);
     }
 
-    public async Task GiveRole(SocketGuildUser User)
+    public async Task GiveRole(SocketGuildUser User, bool sendDMOnVATUSAError = true)
     {
         var userModel = GetVatusaUserInfo(User.Id).Result;
         var artccStaffRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "ARTCC STAFF");
@@ -70,13 +70,15 @@ public class RoleAssignmentService
         var rolesChannel = User.Guild.Channels.FirstOrDefault(x => x.Name == "assign-my-roles");
         string newNickname = "";
 
-        if (userModel == null)
+        if (userModel == null && sendDMOnVATUSAError)
         {
             // Todo send Not found in Vatusa embed instructions.
             await User.CreateDMChannelAsync().Result.SendMessageAsync($"You may link your account Discord account to the VATUSA Discord server here: https://vatusa.net/my/profile. Once complete, simply type the following into the FE-Buddy <#{rolesChannel.Id}> channel and your nickname and roles will be assigned appropriately: ```!Give-Role```");
             _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Not found in VATUSA, no roles were assigned.");
             return;
         }
+
+        if (userModel == null && User.Roles.Contains(verifiedRole)) return;
 
         if (hasArtccStaffRole(userModel))
         {
@@ -108,7 +110,7 @@ public class RoleAssignmentService
         if (User.Nickname.Contains('|'))
         {
             string currentUserNickname = User.Nickname;
-            newNickname = currentUserNickname[..(currentUserNickname.IndexOf("|") + 1)] + newNickname[newNickname.IndexOf("|")..];
+            newNickname = currentUserNickname[..currentUserNickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
         }
         
         await User.ModifyAsync(u => u.Nickname = newNickname);
