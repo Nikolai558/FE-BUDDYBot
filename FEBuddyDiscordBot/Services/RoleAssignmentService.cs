@@ -38,6 +38,8 @@ public class RoleAssignmentService
     {
         SocketGuildUser _user = (SocketGuildUser)User;
 
+        if (_user == null) return;
+
         await GiveRole(_user, false);
 
         SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
@@ -78,7 +80,7 @@ public class RoleAssignmentService
             return;
         }
 
-        if (userModel == null && User.Roles.Contains(verifiedRole)) return;
+        if (userModel == null) return;
 
         if (hasArtccStaffRole(userModel))
         {
@@ -137,7 +139,9 @@ public class RoleAssignmentService
 
     private bool hasArtccStaffRole(VatusaUserData userData)
     {
-        if (userData.data.roles.Length >= 1)
+        if(userData == null) return false;
+
+        if (userData.data?.roles?.Length >= 1)
         {
             return true;
         }
