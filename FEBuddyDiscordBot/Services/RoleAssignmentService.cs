@@ -1,32 +1,22 @@
-﻿using Discord;
-using Discord.WebSocket;
-using FEBuddyDiscordBot.Models;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using FEBuddyDiscordBot.DataAccess;
 using static FEBuddyDiscordBot.Models.VatusaUserModel;
 
 namespace FEBuddyDiscordBot.Services;
 public class RoleAssignmentService
 {
     private readonly IServiceProvider _services;
-    private readonly IConfigurationRoot _config;
+    private readonly IConfiguration _config;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
+    private readonly VatusaApi _vatusaApi;
 
     public RoleAssignmentService(IServiceProvider services)
     {
         _services = services;
-        _config = _services.GetRequiredService<IConfigurationRoot>();
+        _config = _services.GetRequiredService<IConfiguration>();
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<RoleAssignmentService>>();
+        _vatusaApi = _services.GetRequiredService<VatusaApi>();
 
         _discord.UserJoined += UserJoined;
         _discord.UserVoiceStateUpdated += UserConnectedToVoice;
@@ -40,7 +30,7 @@ public class RoleAssignmentService
 
         if (_user == null) return;
 
-        await GiveRole(_user, false);
+        if (NewVoiceState.VoiceChannel != null) await GiveRole(_user, false);
 
         SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
         string privateMeetingVoiceChnlName = "Private Meeting";
@@ -64,18 +54,19 @@ public class RoleAssignmentService
         await GiveRole(User);
     }
 
-    public async Task GiveRole(SocketGuildUser User, bool sendDMOnVATUSAError = true)
+    public async Task GiveRole(SocketGuildUser User, bool SendDM_OnVatusaNotFound = true)
     {
-        var userModel = GetVatusaUserInfo(User.Id).Result;
-        var artccStaffRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "ARTCC STAFF");
-        var verifiedRole = User.Guild.Roles.FirstOrDefault(x => x.Name.ToUpper() == "VERIFIED");
-        var rolesChannel = User.Guild.Channels.FirstOrDefault(x => x.Name == "assign-my-roles");
-        string newNickname = "";
+        VatusaUserData? userModel = await _vatusaApi.GetVatusaUserInfo(User.Id);
+        
+        string guildName = User.Guild.Name;
+        SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "ARTCC STAFF");
+        SocketRole verifiedRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "VERIFIED");
+        SocketGuildChannel rolesChannel = User.Guild.Channels.First(x => x.Name == "assign-my-roles");
 
-        if (userModel == null && sendDMOnVATUSAError)
+        if (userModel == null && SendDM_OnVatusaNotFound)
         {
             string linkInstructions = 
-                "Hello, I am an automated program that is here to help you get your FE-Buddy Discord permissions/roles setup.\n\n" +
+                $"Hello, I am an automated program that is here to help you get your {guildName} Discord permissions/roles setup.\n\n" +
                 "To do this, I need you to sync your Discord account with the VATUSA Discord server; You may do this by going to your VATUSA profile https://vatusa.net/my/profile > “VATUSA Discord Link”.\n\n" +
                 $"When you are complete, join a voice channel or go to the FE-Buddy Discord <#{rolesChannel.Id}> channel and complete the `!GR` command.\n\n" +
                 "If you are unable to do this, please private message one of the Administrators of the discord.";
@@ -95,34 +86,32 @@ public class RoleAssignmentService
             await User.AddRoleAsync(artccStaffRole);
             _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
         }
-        
-        newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility}";
+
+        await ChangeNickname(User, userModel);
+    }
+
+    private async Task ChangeNickname(SocketGuildUser User, VatusaUserData UserData)
+    {
+        string newNickname = $"{UserData.data.fname} {UserData.data.lname} | {UserData.data.facility}";
 
         if (User.Nickname.Contains('|'))
         {
-            string currentUserNickname = User.Nickname;
-            newNickname = currentUserNickname[..currentUserNickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
+            newNickname = User.Nickname[..User.Nickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
         }
 
-        await User.ModifyAsync(u => u.Nickname = newNickname);
-    }
-
-    private async Task<VatusaUserData?> GetVatusaUserInfo(ulong MemberId)
-    {
-        string url = $"https://api.vatusa.net/v2/user/{MemberId}?d";
-
-        using (WebClient webClient = new WebClient())
+        try
         {
-            try
+            _logger.LogInformation($"Nickname: Changing {User.Username} ({User.Id}) nickname -> from {User.Nickname} to {newNickname}");
+            await User.ModifyAsync(u => u.Nickname = newNickname);
+        }
+        catch (Exception ex)
+        {
+            if (ex.Message.Contains("Missing Permissions"))
             {
-                string jsonResponse = await webClient.DownloadStringTaskAsync(url);
-                VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(jsonResponse);
-                return userData;
+                _logger.LogWarning($"Missing Permissions: Could not change Nickname for {User.Username} ({User.Id}) in {User.Guild.Name}");
+                return;
             }
-            catch (WebException)
-            {
-                return null;
-            }
+            throw;
         }
     }
 
@@ -134,13 +123,7 @@ public class RoleAssignmentService
         {
             return true;
         }
-        //foreach (StaffRole role in userData.data.roles)
-        //{
-        //    if (new string[] {"ATM", "DATM", "FE"}.Contains(role.role))
-        //    {
-        //        return true;
-        //    }
-        //}
+
         return false;
     }
 }
