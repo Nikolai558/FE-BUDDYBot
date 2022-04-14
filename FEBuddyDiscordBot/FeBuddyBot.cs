@@ -1,17 +1,19 @@
 ﻿using FEBuddyDiscordBot.DataAccess;
+using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
 using Serilog;
+using Serilog.Events;
 
 namespace FEBuddyDiscordBot;
 public class FeBuddyBot
 {
-    private static IConfigurationRoot _config;
+    private static IConfiguration _config;
 
     public async Task StartAsync()
     {
-        var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "config.json");
+        var _builder = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile(path: "appsettings.json");
         _config = _builder.Build();
 
         DiscordSocketConfig discordConfig = new DiscordSocketConfig()
@@ -27,7 +29,9 @@ public class FeBuddyBot
             .AddSingleton<LoggingService>()
             .AddSingleton<CommandHandler>()
             .AddSingleton<RoleAssignmentService>()
-            .AddSingleton<VatusaApi>();
+            .AddSingleton<VatusaApi>()
+            .AddSingleton<IMongoDbConnection, MongoDbConnection>()
+            .AddSingleton<IMongoGuildData, MongoGuildData>();
 
         ConfigureServices(services);
 
@@ -35,7 +39,7 @@ public class FeBuddyBot
 
         serviceProvider.GetRequiredService<LoggingService>();
 
-        await serviceProvider.GetRequiredService<StartupService>().StartAsync();
+        await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
 
         serviceProvider.GetRequiredService<CommandHandler>();
 
@@ -50,19 +54,19 @@ public class FeBuddyBot
 
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>();
 
-        var logLevel = _config["logLevel"];
-        var level = Serilog.Events.LogEventLevel.Error;
+        string logLevel = _config.GetRequiredSection("Logging").GetRequiredSection("LogLevel").Value;
+        LogEventLevel level = LogEventLevel.Error;
 
         if (!string.IsNullOrEmpty(logLevel))
         {
             switch (logLevel.ToLower())
             {
-                case "error": { level = Serilog.Events.LogEventLevel.Error; break; }
-                case "info": { level = Serilog.Events.LogEventLevel.Information; break; }
-                case "debug": { level = Serilog.Events.LogEventLevel.Debug; break; }
-                case "crit": { level = Serilog.Events.LogEventLevel.Fatal; break; }
-                case "warn": { level = Serilog.Events.LogEventLevel.Warning; break; }
-                case "trace": { level = Serilog.Events.LogEventLevel.Debug; break; }
+                case "error": { level = LogEventLevel.Error; break; }
+                case "info": { level = LogEventLevel.Information; break; }
+                case "debug": { level = LogEventLevel.Debug; break; }
+                case "crit": { level = LogEventLevel.Fatal; break; }
+                case "warn": { level = LogEventLevel.Warning; break; }
+                case "trace": { level = LogEventLevel.Debug; break; }
             }
         }
 

@@ -2,7 +2,7 @@
 public class CommandHandler
 {
     private readonly IServiceProvider _services;
-    private readonly IConfigurationRoot _config;
+    private readonly IConfiguration _config;
     private readonly DiscordSocketClient _discord;
     private readonly CommandService _commands;
     private readonly ILogger _logger;
@@ -10,7 +10,7 @@ public class CommandHandler
     public CommandHandler(IServiceProvider services)
     {
         _services = services;
-        _config = _services.GetRequiredService<IConfigurationRoot>();
+        _config = _services.GetRequiredService<IConfiguration>();
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _commands = _services.GetRequiredService<CommandService>();
         _logger = _services.GetRequiredService<ILogger<CommandHandler>>();
@@ -32,7 +32,7 @@ public class CommandHandler
 
         var context = new CommandContext(_discord, message);
 
-        char prefix = Char.Parse(_config["prefix"]);
+        char prefix = Char.Parse(_config.GetSection("DefaultBotSettings").GetSection("Prefix").Value);
 
         if(!message.HasCharPrefix(prefix, ref argPosition)) return;
 
