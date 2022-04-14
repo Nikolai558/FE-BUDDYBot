@@ -38,6 +38,8 @@ public class RoleAssignmentService
     {
         SocketGuildUser _user = (SocketGuildUser)User;
 
+        await GiveRole(_user);
+
         SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
         string privateMeetingVoiceChnlName = "Private Meeting";
 
@@ -101,6 +103,12 @@ public class RoleAssignmentService
             _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
 
             newNickname = $"{userModel.data.fname} {userModel.data.lname} | {userModel.data.facility}";
+        }
+
+        if (User.Nickname.Contains('|'))
+        {
+            string currentUserNickname = User.Nickname;
+            newNickname = currentUserNickname[..(currentUserNickname.IndexOf("|") + 1)] + newNickname[newNickname.IndexOf("|")..];
         }
         
         await User.ModifyAsync(u => u.Nickname = newNickname);
