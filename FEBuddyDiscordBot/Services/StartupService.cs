@@ -46,7 +46,11 @@ public class StartupService
     private async Task DiscordReady()
     {
         IReadOnlyCollection<SocketGuild>? currentGuilds = _discord.Guilds;
+
+        #pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
         _dataBaseService.CheckGuilds(currentGuilds)
-            .ContinueWith(t => _logger.LogWarning(t.Exception.Message), TaskContinuationOptions.OnlyOnFaulted);
+            .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
+        #pragma warning restore CS4014
+
     }
 }

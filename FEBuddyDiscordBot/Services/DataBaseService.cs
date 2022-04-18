@@ -49,6 +49,5 @@ public class DataBaseService
                 _logger.LogInformation($"TEST: Added {guild.Name} ({guild.Id}) to DB");
             }
         }
-        //throw new Exception("THIS IS A TEST EXCEPTION!");
     }
 }
