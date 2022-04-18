@@ -30,7 +30,7 @@ public class DataBaseService
     {
         foreach (var guild in guildList)
         {
-            GuildModel foundGuildInDb = await _guildData.GetGuildAsync(guild.Id.ToString());
+            GuildModel foundGuildInDb = await _guildData.GetGuildAsync(guild.Id);
             if (foundGuildInDb != null)
             {
                 _logger.LogInformation("TEST: Found Guild in DB");
@@ -41,8 +41,13 @@ public class DataBaseService
 
                 GuildModel newGuild = new GuildModel
                 {
-                    Name = guild.Name,
-                    GuildId = guild.Id.ToString()
+                    GuildId = guild.Id,
+                    GuildName = guild.Name,
+                    Settings = new GuildSettings 
+                    { 
+                        Prefix = _config.GetSection("DefaultBotSettings").GetSection("Prefix").Value, 
+                        VerifiedRoleName = _config.GetSection("DefaultBotSettings").GetSection("Verified").Value
+                    }
                 };
                 await _guildData.CreateGuild(newGuild);
 
