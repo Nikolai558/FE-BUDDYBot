@@ -33,11 +33,11 @@ public class DataBaseService
             GuildModel foundGuildInDb = await _guildData.GetGuildAsync(guild.Id);
             if (foundGuildInDb != null)
             {
-                _logger.LogInformation("TEST: Found Guild in DB");
+                _logger.LogInformation($"DataBase: Found Guild, {guild.Name} ({guild.Id}), in DB");
             }
             else
             {
-                _logger.LogInformation("TEST: Did NOT find Guild in DB");
+                _logger.LogInformation($"DataBase: Did NOT find Guild, {guild.Name} ({guild.Id}), in DB");
 
                 GuildModel newGuild = new GuildModel
                 {
@@ -46,12 +46,12 @@ public class DataBaseService
                     Settings = new GuildSettings 
                     { 
                         Prefix = _config.GetSection("DefaultBotSettings").GetSection("Prefix").Value, 
-                        VerifiedRoleName = _config.GetSection("DefaultBotSettings").GetSection("Verified").Value
+                        VerifiedRoleName = _config.GetSection("DefaultBotSettings").GetSection("VerifiedRole").Value
                     }
                 };
                 await _guildData.CreateGuild(newGuild);
 
-                _logger.LogInformation($"TEST: Added {guild.Name} ({guild.Id}) to DB");
+                _logger.LogInformation($"DataBase: Added Guild, {guild.Name} ({guild.Id}), to DB with default options");
             }
         }
     }
