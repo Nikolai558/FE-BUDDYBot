@@ -1,6 +1,4 @@
-﻿using FEBuddyDiscordBot.DataAccess.DB;
-using FEBuddyDiscordBot.Models;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace FEBuddyDiscordBot.Services;
 public class StartupService
@@ -10,7 +8,7 @@ public class StartupService
     private readonly DiscordSocketClient _discord;
     private readonly CommandService _commands;
     private readonly ILogger _logger;
-    private IMongoGuildData _guildData;
+    private readonly DataBaseService _dataBaseService;
 
     public StartupService(IServiceProvider services)
     {
@@ -20,7 +18,7 @@ public class StartupService
         _commands = _services.GetRequiredService<CommandService>();
         _logger = _services.GetRequiredService<ILogger<StartupService>>();
 
-        _guildData = _services.GetRequiredService<IMongoGuildData>();
+        _dataBaseService = _services.GetRequiredService<DataBaseService>();
 
         _discord.Ready += DiscordReady;
 
@@ -45,36 +43,14 @@ public class StartupService
         await _commands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
     }
 
-    private Task DiscordReady()
+    private async Task DiscordReady()
     {
         IReadOnlyCollection<SocketGuild>? currentGuilds = _discord.Guilds;
-        CheckGuildDB(currentGuilds);
-        return Task.CompletedTask;
-    }
 
-    public async Task CheckGuildDB(IReadOnlyCollection<SocketGuild> guildList)
-    {
-        foreach (var guild in guildList)
-        {
-            GuildModel foundGuildInDb = await _guildData.GetGuildAsync(guild.Id.ToString());
-            if (foundGuildInDb != null)
-            {
-                _logger.LogInformation("TEST: Found Guild in DB");
-            }
-            else
-            {
-                _logger.LogInformation("TEST: Did NOT find Guild in DB");
+        #pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
+        _dataBaseService.CheckGuilds(currentGuilds)
+            .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
+        #pragma warning restore CS4014
 
-                GuildModel newGuild = new GuildModel
-                {
-                    Name = guild.Name,
-                    GuildId = guild.Id.ToString()
-                };
-                await _guildData.CreateGuild(newGuild);
-
-                _logger.LogInformation($"TEST: Added {guild.Name} ({guild.Id}) to DB");
-
-            }
-        }
     }
 }

@@ -1,4 +1,6 @@
-﻿using FEBuddyDiscordBot.Services;
+﻿using FEBuddyDiscordBot.DataAccess.DB;
+using FEBuddyDiscordBot.Models;
+using FEBuddyDiscordBot.Services;
 
 namespace FEBuddyDiscordBot.Modules.Users;
 
@@ -10,6 +12,7 @@ public class UserCommands : ModuleBase
     private readonly IConfiguration _config;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
+    private readonly IMongoGuildData _guildData;
 
     public UserCommands(IServiceProvider services)
     {
@@ -17,6 +20,7 @@ public class UserCommands : ModuleBase
         _config = _services.GetRequiredService<IConfiguration>();
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<UserCommands>>();
+        _guildData = _services.GetRequiredService<IMongoGuildData>();
 
         _logger.LogInformation("Module: Loaded UserCommands");
     }
@@ -28,7 +32,8 @@ public class UserCommands : ModuleBase
     {
         if (Context.Channel is IGuildChannel)
         {
-            await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User);
+            GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
+            await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
         }
         else
         {

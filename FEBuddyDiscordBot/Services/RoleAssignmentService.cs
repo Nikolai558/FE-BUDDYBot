@@ -1,4 +1,6 @@
 ﻿using FEBuddyDiscordBot.DataAccess;
+using FEBuddyDiscordBot.DataAccess.DB;
+using FEBuddyDiscordBot.Models;
 using static FEBuddyDiscordBot.Models.VatusaUserModel;
 
 namespace FEBuddyDiscordBot.Services;
@@ -9,6 +11,7 @@ public class RoleAssignmentService
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
     private readonly VatusaApi _vatusaApi;
+    private readonly IMongoGuildData _guildData;
 
     public RoleAssignmentService(IServiceProvider services)
     {
@@ -17,6 +20,7 @@ public class RoleAssignmentService
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<RoleAssignmentService>>();
         _vatusaApi = _services.GetRequiredService<VatusaApi>();
+        _guildData = _services.GetRequiredService<IMongoGuildData>();
 
         _discord.UserJoined += UserJoined;
         _discord.UserVoiceStateUpdated += UserConnectedToVoice;
@@ -27,44 +31,54 @@ public class RoleAssignmentService
     private async Task UserConnectedToVoice(SocketUser User, SocketVoiceState CurrentVoiceState, SocketVoiceState NewVoiceState)
     {
         SocketGuildUser _user = (SocketGuildUser)User;
+        GuildModel guild = await _guildData.GetGuildAsync(_user.Guild.Id);
 
         if (_user == null) return;
 
-        if (NewVoiceState.VoiceChannel != null) await GiveRole(_user, false);
-
-        SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == "voice-meeting-txt");
-        string privateMeetingVoiceChnlName = "Private Meeting";
-
-        if (CurrentVoiceState.VoiceChannel != null && CurrentVoiceState.VoiceChannel.Name == privateMeetingVoiceChnlName)
+        if (guild.Settings.AutoAssignRoles_OnVoiceChannelJoin)
         {
-            await _user.RemoveRoleAsync(voiceMeetingTextRole);
-            _logger.LogInformation($"Remove Role: {_user.Username} ({_user.Id}) in {_user.Guild.Name} -> User is no longer connected to {privateMeetingVoiceChnlName} Voice Channel; Removed the {voiceMeetingTextRole.Name} role.");
+            if (NewVoiceState.VoiceChannel != null) await GiveRole(_user, guild, false);
         }
 
-        if (NewVoiceState.VoiceChannel != null && NewVoiceState.VoiceChannel.Name == privateMeetingVoiceChnlName)
+        if (guild.Settings.AssignPrivateMeetingRole_OnVoiceChannelJoin)
         {
-            await _user.AddRoleAsync(voiceMeetingTextRole);
-            _logger.LogInformation($"Give Role: {_user.Username} ({_user.Id}) in {_user.Guild.Name} -> User Connected to {privateMeetingVoiceChnlName} Voice Channel; Added the {voiceMeetingTextRole.Name} role");
+            SocketRole voiceMeetingTextRole = _user.Guild.Roles.First(x => x.Name == guild.Settings.PrivateMeetingRole);
+            string privateMeetingVoiceChnlName = guild.Settings.PrivateMeetingVoiceChannelName;
+
+            if (CurrentVoiceState.VoiceChannel != null && CurrentVoiceState.VoiceChannel.Name == privateMeetingVoiceChnlName)
+            {
+                await _user.RemoveRoleAsync(voiceMeetingTextRole);
+                _logger.LogInformation($"Remove Role: {_user.Username} ({_user.Id}) in {_user.Guild.Name} -> User is no longer connected to {privateMeetingVoiceChnlName} Voice Channel; Removed the {voiceMeetingTextRole.Name} role.");
+            }
+
+            if (NewVoiceState.VoiceChannel != null && NewVoiceState.VoiceChannel.Name == privateMeetingVoiceChnlName)
+            {
+                await _user.AddRoleAsync(voiceMeetingTextRole);
+                _logger.LogInformation($"Give Role: {_user.Username} ({_user.Id}) in {_user.Guild.Name} -> User Connected to {privateMeetingVoiceChnlName} Voice Channel; Added the {voiceMeetingTextRole.Name} role");
+            }
         }
     }
 
     private async Task UserJoined(SocketGuildUser User)
     {
         _logger.LogInformation($"User Joined: {User.Username} ({User.Id}) joined {User.Guild.Name}");
-        await GiveRole(User);
+        GuildModel guild = await _guildData.GetGuildAsync(User.Guild.Id);
+        if (guild.Settings.AutoAssignRoles_OnJoin)
+        {
+            await GiveRole(User, guild);
+        }
     }
 
-    public async Task GiveRole(SocketGuildUser User, bool SendDM_OnVatusaNotFound = true)
+    public async Task GiveRole(SocketGuildUser User, GuildModel Guild, bool SendDM_OnVatusaNotFound = true)
     {
         VatusaUserData? userModel = await _vatusaApi.GetVatusaUserInfo(User.Id);
         
         string guildName = User.Guild.Name;
-        SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "ARTCC STAFF");
-        SocketRole verifiedRole = User.Guild.Roles.First(x => x.Name.ToUpper() == "VERIFIED");
-        SocketGuildChannel rolesChannel = User.Guild.Channels.First(x => x.Name == "assign-my-roles");
 
         if (userModel == null && SendDM_OnVatusaNotFound)
         {
+            SocketGuildChannel rolesChannel = User.Guild.Channels.First(x => x.Name == Guild.Settings.RolesTextChannelName);
+
             string linkInstructions = 
                 $"Hello, I am an automated program that is here to help you get your {guildName} Discord permissions/roles setup.\n\n" +
                 "To do this, I need you to sync your Discord account with the VATUSA Discord server; You may do this by going to your VATUSA profile https://vatusa.net/my/profile > “VATUSA Discord Link”.\n\n" +
@@ -78,16 +92,25 @@ public class RoleAssignmentService
 
         if (userModel == null) return;
 
+        SocketRole verifiedRole = User.Guild.Roles.First(x => x.Name == Guild.Settings.VerifiedRoleName);
+
         await User.AddRoleAsync(verifiedRole);
         _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
 
-        if (hasArtccStaffRole(userModel))
+        if (Guild.Settings.AssignArtccStaffRole && !string.IsNullOrEmpty(Guild.Settings.ArtccStaffRoleName))
         {
-            await User.AddRoleAsync(artccStaffRole);
-            _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
+            if (hasArtccStaffRole(userModel))
+            {
+                SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name == Guild.Settings.ArtccStaffRoleName);
+                await User.AddRoleAsync(artccStaffRole);
+                _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
+            }
         }
 
-        await ChangeNickname(User, userModel);
+        if (Guild.Settings.AutoChangeNicknames)
+        {
+            await ChangeNickname(User, userModel);
+        }
     }
 
     private async Task ChangeNickname(SocketGuildUser User, VatusaUserData UserData)
