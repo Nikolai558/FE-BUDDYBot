@@ -16,5 +16,17 @@ public class GuildModel
 public class GuildSettings
 {
     public string Prefix { get; set; }
+
+    public bool AutoAssignRoles_OnJoin { get; set; }
+    public bool AutoAssignRoles_OnVoiceChannelJoin { get; set; }
+    public bool AssignPrivateMeetingRole_OnVoiceChannelJoin { get; set; }
+    public bool AutoChangeNicknames { get; set; }
+    public bool AssignArtccStaffRole { get; set; }
+
+    public string PrivateMeetingVoiceChannelName { get; set; }
+    public string PrivateMeetingRole { get; set; }
+
     public string VerifiedRoleName { get; set; }
+    public string ArtccStaffRoleName { get; set; }
+    public string RolesTextChannelName { get; set; }
 }
