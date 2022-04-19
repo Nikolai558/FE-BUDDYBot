@@ -1,13 +1,13 @@
 # Discord Event Commands
 ## User Joined Guild Event
 `When a user joins the guild (discord server), this event is triggered.`
-The bot will check a users status on the [VATUSA](https://www.vatusa.net/) website. If the user has an account and the discord is linked to that account, one of the following roles is assigned based on what is returned from the VATUSA website.
+The bot will check a users status on the [VATUSA](https://www.vatusa.net/) website. If the user has an account and their discord is linked to that account, one of the following roles is assigned based on what is returned from the VATUSA website.
   * "ARTCC STAFF"
   * "VERIFIED"
 
 This command will also change the users **nickname** to what is returned from the VATUSA website in the following format:
 
-`{First Name} {Last Name} | {ARTCC} {Staff Position}`
+`{First Name} {Last Name} | {ARTCC}`
 
 If the user does not have a VATUSA account or their discord is not linked to that account, the bot will send a private message with instructions on how to link their discord account.
 
