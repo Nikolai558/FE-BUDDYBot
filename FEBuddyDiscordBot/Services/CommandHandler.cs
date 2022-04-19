@@ -79,11 +79,7 @@ public class CommandHandler
         {
             if (result.ErrorReason != "Unknown command.")
             {
-                await message.Channel.SendMessageAsync($"**Error:** {result.ErrorReason}");
-            }
-            else
-            {
-                await message.Author.SendMessageAsync($"**Error: {result.ErrorReason}**\n\t'{message.Content}'");
+                await message.Author.SendMessageAsync($"**Error:** {result.ErrorReason}");
             }
         }
     }
