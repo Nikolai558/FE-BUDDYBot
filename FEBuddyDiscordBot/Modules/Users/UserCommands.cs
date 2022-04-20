@@ -22,7 +22,7 @@ public class UserCommands : ModuleBase
         _logger = _services.GetRequiredService<ILogger<UserCommands>>();
         _guildData = _services.GetRequiredService<IMongoGuildData>();
 
-        _logger.LogInformation("Module: Loaded UserCommands");
+        _logger.LogDebug("Module: Loaded UserCommands");
     }
 
     // Discord Server User commands go here.
@@ -32,8 +32,10 @@ public class UserCommands : ModuleBase
     {
         if (Context.Channel is IGuildChannel)
         {
+            await Context.Message.DeleteAsync();
             GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
-            await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
+            EmbedBuilder embed = await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
+            await ReplyAsync(embed: embed.Build());
         }
         else
         {

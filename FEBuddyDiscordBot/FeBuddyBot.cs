@@ -1,4 +1,5 @@
-﻿using FEBuddyDiscordBot.DataAccess;
+﻿using Discord.Interactions;
+using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,18 +26,22 @@ public class FeBuddyBot
             GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
         };
 
+        DiscordSocketClient discordClient = new DiscordSocketClient(discordConfig);
+
         var services = new ServiceCollection()
-            .AddSingleton(new DiscordSocketClient(discordConfig))
+            .AddSingleton(discordClient)
             .AddSingleton(_config)
-            .AddSingleton(new CommandService(new CommandServiceConfig { DefaultRunMode = RunMode.Async, LogLevel = LogSeverity.Debug, CaseSensitiveCommands = false, ThrowOnError = false }))
+            .AddSingleton(new CommandService(new CommandServiceConfig { DefaultRunMode = Discord.Commands.RunMode.Async, LogLevel = LogSeverity.Debug, CaseSensitiveCommands = false, ThrowOnError = false }))
             .AddSingleton<StartupService>()
             .AddSingleton<LoggingService>()
             .AddSingleton<CommandHandler>()
-            .AddSingleton<RoleAssignmentService>()
-            .AddSingleton<VatusaApi>()
+            .AddSingleton(new InteractionService(discordClient, new InteractionServiceConfig { LogLevel = LogSeverity.Debug }))
+            .AddSingleton<InteractionHandler>()
             .AddSingleton<IMongoDbConnection, MongoDbConnection>()
             .AddSingleton<IMongoGuildData, MongoGuildData>()
-            .AddSingleton<DataBaseService>();
+            .AddSingleton<DataBaseService>()
+            .AddSingleton<RoleAssignmentService>()
+            .AddSingleton<VatusaApi>();
 
         ConfigureServices(services);
 
@@ -44,11 +49,13 @@ public class FeBuddyBot
 
         serviceProvider.GetRequiredService<LoggingService>();
 
-        await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
+        serviceProvider.GetRequiredService<InteractionHandler>();
 
         serviceProvider.GetRequiredService<CommandHandler>();
 
         serviceProvider.GetRequiredService<RoleAssignmentService>();
+
+        await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
 
         await Task.Delay(-1);
     }

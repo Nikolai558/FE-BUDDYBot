@@ -24,6 +24,7 @@ public class DataBaseService
         _logger = _services.GetRequiredService<ILogger<StartupService>>();
         _guildData = _services.GetRequiredService<IMongoGuildData>();
 
+        _logger.LogDebug("Loaded: DataBaseService");
     }
 
     public async Task CheckGuilds(IReadOnlyCollection<SocketGuild> guildList)

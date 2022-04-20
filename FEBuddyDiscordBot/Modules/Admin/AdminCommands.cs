@@ -17,7 +17,7 @@ public class AdminCommands: ModuleBase
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<AdminCommands>>();
 
-        _logger.LogInformation("Module: Loaded AdminCommands");
+        _logger.LogDebug("Module: Loaded AdminCommands");
     }
 
     // Discord Server Admin only commands go here.

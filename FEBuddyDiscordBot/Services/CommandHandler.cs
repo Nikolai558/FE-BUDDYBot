@@ -27,7 +27,7 @@ public class CommandHandler
 
         _discord.MessageReceived += HandleCommand;
 
-        _logger.LogInformation("Loaded: CommandHandler");
+        _logger.LogDebug("Loaded: CommandHandler");
     }
 
     private async Task HandleCommand(SocketMessage arg)
