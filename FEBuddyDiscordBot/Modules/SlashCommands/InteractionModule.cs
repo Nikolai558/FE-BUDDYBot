@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace FEBuddyDiscordBot.Modules;
+namespace FEBuddyDiscordBot.Modules.SlashCommands;
 
 public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
 {
