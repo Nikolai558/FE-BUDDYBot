@@ -17,7 +17,7 @@ public class StaffCommands : ModuleBase
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<StaffCommands>>();
 
-        _logger.LogInformation("Module: Loaded StaffCommands");
+        _logger.LogDebug("Module: Loaded StaffCommands");
     }
 
     // Discord Server Staff commands go here.

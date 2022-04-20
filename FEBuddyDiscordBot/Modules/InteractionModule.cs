@@ -21,7 +21,7 @@ public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<InteractionModule>>();
 
-        _logger.LogInformation("Module: Loaded InteractionModule");
+        _logger.LogDebug("Module: Loaded InteractionModule");
     }
 
 

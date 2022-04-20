@@ -18,7 +18,7 @@ public class OwnerCommands : ModuleBase
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _logger = _services.GetRequiredService<ILogger<OwnerCommands>>();
 
-        _logger.LogInformation("Module: Loaded OwnerCommands");
+        _logger.LogDebug("Module: Loaded OwnerCommands");
     }
 
     // Bot Owner Only Commands go here.

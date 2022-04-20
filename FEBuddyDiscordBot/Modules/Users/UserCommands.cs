@@ -22,7 +22,7 @@ public class UserCommands : ModuleBase
         _logger = _services.GetRequiredService<ILogger<UserCommands>>();
         _guildData = _services.GetRequiredService<IMongoGuildData>();
 
-        _logger.LogInformation("Module: Loaded UserCommands");
+        _logger.LogDebug("Module: Loaded UserCommands");
     }
 
     // Discord Server User commands go here.
