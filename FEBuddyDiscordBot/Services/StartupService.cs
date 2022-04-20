@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using Discord.Interactions;
+using System.Reflection;
 
 namespace FEBuddyDiscordBot.Services;
 public class StartupService
@@ -8,6 +9,7 @@ public class StartupService
     private readonly DiscordSocketClient _discord;
     private readonly CommandService _commands;
     private readonly ILogger _logger;
+    private readonly InteractionService _interactionService;
     private readonly DataBaseService _dataBaseService;
 
     public StartupService(IServiceProvider services)
@@ -17,7 +19,7 @@ public class StartupService
         _discord = _services.GetRequiredService<DiscordSocketClient>();
         _commands = _services.GetRequiredService<CommandService>();
         _logger = _services.GetRequiredService<ILogger<StartupService>>();
-
+        _interactionService = _services.GetRequiredService<InteractionService>();
         _dataBaseService = _services.GetRequiredService<DataBaseService>();
 
         _discord.Ready += DiscordReady;
@@ -46,6 +48,12 @@ public class StartupService
     private async Task DiscordReady()
     {
         IReadOnlyCollection<SocketGuild>? currentGuilds = _discord.Guilds;
+
+        // For development only! For production use await _interactionService.RegisterCommandsGloballyAsync(); instead of foreach loop.
+        foreach (var guild in currentGuilds)
+        {
+            await _interactionService.RegisterCommandsToGuildAsync(guild.Id);
+        }
 
         #pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
         _dataBaseService.CheckGuilds(currentGuilds)
