@@ -25,7 +25,7 @@ public class RoleAssignmentService
         _discord.UserJoined += UserJoined;
         _discord.UserVoiceStateUpdated += UserConnectedToVoice;
 
-        _logger.LogInformation("Loaded: RoleAssignmentService");
+        _logger.LogDebug("Loaded: RoleAssignmentService");
     }
 
     private async Task UserConnectedToVoice(SocketUser User, SocketVoiceState CurrentVoiceState, SocketVoiceState NewVoiceState)

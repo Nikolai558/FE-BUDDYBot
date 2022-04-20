@@ -24,7 +24,7 @@ public class StartupService
 
         _discord.Ready += DiscordReady;
 
-        _logger.LogInformation("Loaded: StartupService");
+        _logger.LogDebug("Loaded: StartupService");
     }
 
     public async Task StartAsync(bool UseDevToken)

@@ -23,7 +23,7 @@ public class InteractionHandler
 
         _discord.Ready += InitializeAsync;
 
-        _logger.LogInformation("Loaded: InteractionHandler");
+        _logger.LogDebug("Loaded: InteractionHandler");
     }
 
     private async Task InitializeAsync()

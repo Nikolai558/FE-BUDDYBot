@@ -19,7 +19,7 @@ public class LoggingService
         _commands.Log += OnLogAsync;
         _interactionCommands.Log += OnLogAsync;
 
-        _logger.LogInformation("Loaded: LoggingService");
+        _logger.LogDebug("Loaded: LoggingService");
     }
 
     private Task OnLogAsync(LogMessage arg)
