@@ -51,11 +51,11 @@ public class FeBuddyBot
 
         serviceProvider.GetRequiredService<InteractionHandler>();
 
-        await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
-
         serviceProvider.GetRequiredService<CommandHandler>();
 
         serviceProvider.GetRequiredService<RoleAssignmentService>();
+
+        await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
 
         await Task.Delay(-1);
     }
