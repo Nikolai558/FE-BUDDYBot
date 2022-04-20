@@ -69,8 +69,14 @@ public class RoleAssignmentService
         }
     }
 
-    public async Task GiveRole(SocketGuildUser User, GuildModel Guild, bool SendDM_OnVatusaNotFound = true)
+    public async Task<EmbedBuilder> GiveRole(SocketGuildUser User, GuildModel Guild, bool SendDM_OnVatusaNotFound = true)
     {
+        EmbedBuilder embed = new EmbedBuilder()
+        {
+            Color = Color.Green,
+            Title = "Your roles have been assigned"
+        };
+
         VatusaUserData? userModel = await _vatusaApi.GetVatusaUserInfo(User.Id);
         
         string guildName = User.Guild.Name;
@@ -87,15 +93,20 @@ public class RoleAssignmentService
 
             await User.CreateDMChannelAsync().Result.SendMessageAsync(linkInstructions);
             _logger.LogInformation($"No Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Not found in VATUSA, no roles were assigned.");
-            return;
+            
+            embed.Title = "Not Linked";
+            embed.Description = "Your Discord account is not linked on VATUSA. Link it here: \nhttps://vatusa.net/my/profile";
+            embed.Color = Color.Red;
+            return embed;
         }
 
-        if (userModel == null) return;
+        if (userModel == null) return new EmbedBuilder() { Title = "Not Linked", Color = Color.Red, Description = "Your Discord account is not linked on VATUSA. Link it here: \nhttps://vatusa.net/my/profile" };
 
         SocketRole verifiedRole = User.Guild.Roles.First(x => x.Name == Guild.Settings.VerifiedRoleName);
 
         await User.AddRoleAsync(verifiedRole);
         _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
+        embed.Description += verifiedRole.Mention + " ";
 
         if (Guild.Settings.AssignArtccStaffRole && !string.IsNullOrEmpty(Guild.Settings.ArtccStaffRoleName))
         {
@@ -104,20 +115,24 @@ public class RoleAssignmentService
                 SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name == Guild.Settings.ArtccStaffRoleName);
                 await User.AddRoleAsync(artccStaffRole);
                 _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
+                embed.Description += artccStaffRole.Mention + " ";
             }
         }
 
         if (Guild.Settings.AutoChangeNicknames)
         {
-            await ChangeNickname(User, userModel);
+            var nickname = await ChangeNickname(User, userModel);
+
+            embed.Footer = new EmbedFooterBuilder() { Text = "Your new nickname is: " + nickname };
         }
+        return embed;
     }
 
-    private async Task ChangeNickname(SocketGuildUser User, VatusaUserData UserData)
+    private async Task<string> ChangeNickname(SocketGuildUser User, VatusaUserData UserData)
     {
         string newNickname = $"{UserData.data.fname} {UserData.data.lname} | {UserData.data.facility}";
 
-        if (User.Nickname.Contains('|'))
+        if (User.Nickname != null && User.Nickname.Contains('|'))
         {
             newNickname = User.Nickname[..User.Nickname.IndexOf("|")] + newNickname[newNickname.IndexOf("|")..];
         }
@@ -126,13 +141,14 @@ public class RoleAssignmentService
         {
             _logger.LogInformation($"Nickname: Changing {User.Username} ({User.Id}) nickname -> from {User.Nickname} to {newNickname}");
             await User.ModifyAsync(u => u.Nickname = newNickname);
+            return newNickname;
         }
         catch (Exception ex)
         {
             if (ex.Message.Contains("Missing Permissions"))
             {
                 _logger.LogWarning($"Missing Permissions: Could not change Nickname for {User.Username} ({User.Id}) in {User.Guild.Name}");
-                return;
+                return "I could not change your nikname.";
             }
             throw;
         }

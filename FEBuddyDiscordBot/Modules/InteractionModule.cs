@@ -32,9 +32,10 @@ public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("give-role", "Get discord roles/permissions. Your Discord account must be linked on the VATUSA website.")]
     public async Task AssignRoles()
     {
+        await DeferAsync();
         GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
-        await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
-        await RespondAsync("I gave you roles! Maybe... I dont really know, this seems to be my response everytime regardless of status.");
+        var embed = await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
+        await FollowupAsync(embed: embed.Build());
     }
 
     //[SlashCommand("ping", "Receive a ping message! ")]
