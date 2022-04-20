@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
 
-public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
+public class UserSlashCommands: InteractionModuleBase<SocketInteractionContext>
 {
 
     private readonly IServiceProvider _services;
@@ -19,15 +19,15 @@ public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
     private readonly ILogger _logger;
     private readonly IMongoGuildData _guildData;
 
-    public InteractionModule(IServiceProvider services)
+    public UserSlashCommands(IServiceProvider services)
     {
         _services = services;
         _config = _services.GetRequiredService<IConfiguration>();
         _discord = _services.GetRequiredService<DiscordSocketClient>();
-        _logger = _services.GetRequiredService<ILogger<InteractionModule>>();
+        _logger = _services.GetRequiredService<ILogger<UserSlashCommands>>();
         _guildData = _services.GetRequiredService<IMongoGuildData>();
 
-        _logger.LogDebug("Module: Loaded InteractionModule");
+        _logger.LogDebug("Module: Loaded UserSlashCommands");
     }
 
     [SlashCommand("give-role", "Get discord roles/permissions. Your Discord account must be linked on the VATUSA website.")]
