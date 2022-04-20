@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modules;
+
 public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
 {
 
@@ -30,7 +31,6 @@ public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
     }
 
     [SlashCommand("give-role", "Get discord roles/permissions. Your Discord account must be linked on the VATUSA website.")]
-    [Alias("gr", "assign-role")]
     public async Task AssignRoles()
     {
         //await DeferAsync(ephemeral: true); // ephemeral means that only the person doing the command will see the message/response.
