@@ -30,17 +30,13 @@ public class InteractionModule: InteractionModuleBase<SocketInteractionContext>
     }
 
     [SlashCommand("give-role", "Get discord roles/permissions. Your Discord account must be linked on the VATUSA website.")]
+    [Alias("gr", "assign-role")]
     public async Task AssignRoles()
     {
+        //await DeferAsync(ephemeral: true); // ephemeral means that only the person doing the command will see the message/response.
         await DeferAsync();
         GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
         var embed = await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
         await FollowupAsync(embed: embed.Build());
     }
-
-    //[SlashCommand("ping", "Receive a ping message! ")]
-    //public async Task PingCommand()
-    //{
-    //    await RespondAsync("PING!");
-    //}
 }
