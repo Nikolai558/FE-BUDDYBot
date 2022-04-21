@@ -9,12 +9,12 @@ public class VatusaApi
     {
         string url = $"https://api.vatusa.net/v2/user/{MemberId}?d";
 
-        using (WebClient webClient = new WebClient())
+        using (HttpClient httpClient = new HttpClient())
         {
             try
             {
-                string jsonResponse = await webClient.DownloadStringTaskAsync(url);
-                VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(jsonResponse);
+                string json = await httpClient.GetStringAsync(url);
+                VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(json);
                 return userData;
             }
             catch (WebException)

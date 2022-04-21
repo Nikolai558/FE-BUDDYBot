@@ -106,16 +106,16 @@ public class RoleAssignmentService
 
         await User.AddRoleAsync(verifiedRole);
         _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA; Assigned {verifiedRole?.Name} role to user.");
-        embed.Description += verifiedRole.Mention + " ";
+        embed.Description += $"{verifiedRole?.Mention} ";
 
         if (Guild.Settings.AssignArtccStaffRole && !string.IsNullOrEmpty(Guild.Settings.ArtccStaffRoleName))
         {
             if (hasArtccStaffRole(userModel))
             {
-                SocketRole artccStaffRole = User.Guild.Roles.First(x => x.Name == Guild.Settings.ArtccStaffRoleName);
+                SocketRole? artccStaffRole = User.Guild.Roles.First(x => x.Name == Guild.Settings.ArtccStaffRoleName);
                 await User.AddRoleAsync(artccStaffRole);
                 _logger.LogInformation($"Give Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Found user in VATUSA, user also is staff; Assigned {artccStaffRole?.Name} role to user.");
-                embed.Description += artccStaffRole.Mention + " ";
+                embed.Description += artccStaffRole?.Mention + " ";
             }
         }
 
@@ -128,9 +128,9 @@ public class RoleAssignmentService
         return embed;
     }
 
-    private async Task<string> ChangeNickname(SocketGuildUser User, VatusaUserData UserData)
+    private async Task<string> ChangeNickname(SocketGuildUser User, VatusaUserData? UserData)
     {
-        string newNickname = $"{UserData.data.fname} {UserData.data.lname} | {UserData.data.facility}";
+        string newNickname = $"{UserData?.data?.fname} {UserData?.data?.lname} | {UserData?.data?.facility}";
 
         if (User.Nickname != null && User.Nickname.Contains('|'))
         {
