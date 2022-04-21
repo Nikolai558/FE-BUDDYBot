@@ -4,14 +4,23 @@ using FEBuddyDiscordBot.Models;
 using static FEBuddyDiscordBot.Models.VatusaUserModel;
 
 namespace FEBuddyDiscordBot.Services;
+
+/// <summary>
+/// Assign roles to users, dependant on guilds configuration inside of the database
+/// </summary>
 public class RoleAssignmentService
 {
+    // Dependency Injection services needed 
     private readonly IServiceProvider _services;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
     private readonly VatusaApi _vatusaApi;
     private readonly IMongoGuildData _guildData;
 
+    /// <summary>
+    /// Constructor for the Role Assignment Service
+    /// </summary>
+    /// <param name="services">Dependency Injection Service Provider</param>
     public RoleAssignmentService(IServiceProvider services)
     {
         _services = services;
@@ -20,12 +29,20 @@ public class RoleAssignmentService
         _vatusaApi = _services.GetRequiredService<VatusaApi>();
         _guildData = _services.GetRequiredService<IMongoGuildData>();
 
+        // Handle discord events.
         _discord.UserJoined += UserJoined;
         _discord.UserVoiceStateUpdated += UserConnectedToVoice;
 
         _logger.LogDebug("Loaded: RoleAssignmentService");
     }
 
+    /// <summary>
+    /// This function is called anytime a user joins or leaves a discord voice channel.
+    /// </summary>
+    /// <param name="User">Socket user from Discord</param>
+    /// <param name="CurrentVoiceState">Current voice state of that user</param>
+    /// <param name="NewVoiceState">New voice state of that user</param>
+    /// <returns>None</returns>
     private async Task UserConnectedToVoice(SocketUser User, SocketVoiceState CurrentVoiceState, SocketVoiceState NewVoiceState)
     {
         SocketGuildUser _user = (SocketGuildUser)User;
@@ -57,6 +74,11 @@ public class RoleAssignmentService
         }
     }
 
+    /// <summary>
+    /// Handle user's joining a guild the bot is in.
+    /// </summary>
+    /// <param name="User">Socket Guild User from discord</param>
+    /// <returns>None</returns>
     private async Task UserJoined(SocketGuildUser User)
     {
         _logger.LogInformation($"User Joined: {User.Username} ({User.Id}) joined {User.Guild.Name}");
@@ -67,6 +89,13 @@ public class RoleAssignmentService
         }
     }
 
+    /// <summary>
+    /// Give specific roles/permissions to users that have their discord account linked to VATUSA
+    /// </summary>
+    /// <param name="User">Socket Guild User from Discord</param>
+    /// <param name="Guild">Guild Model from Database</param>
+    /// <param name="SendDM_OnVatusaNotFound">Send a direct message to the user stating their account's are not linked.</param>
+    /// <returns>Embed Builder showing New roles and nickname that was assigned to that user.</returns>
     public async Task<EmbedBuilder> GiveRole(SocketGuildUser User, GuildModel Guild, bool SendDM_OnVatusaNotFound = true)
     {
         EmbedBuilder embed = new()
@@ -126,6 +155,12 @@ public class RoleAssignmentService
         return embed;
     }
 
+    /// <summary>
+    /// Change the Users Nickname. If the user has a "|" in their nickname only change it AFTER the pipe symbol
+    /// </summary>
+    /// <param name="User">Socket Guild User from discord.</param>
+    /// <param name="UserData">User Model from VATUSA API</param>
+    /// <returns>A string for what the user's nickname was changed to.</returns>
     private async Task<string> ChangeNickname(SocketGuildUser User, VatusaUserData? UserData)
     {
         string newNickname = $"{UserData?.data?.fname} {UserData?.data?.lname} | {UserData?.data?.facility}";
@@ -152,6 +187,11 @@ public class RoleAssignmentService
         }
     }
 
+    /// <summary>
+    /// Check for any staff roles in the User Model from VATUSA API
+    /// </summary>
+    /// <param name="userData">User Modle from VATUSA API</param>
+    /// <returns>True if the user has a staff role, otherwise returns false.</returns>
     private static bool HasArtccStaffRole(VatusaUserData userData)
     {
         if(userData == null) return false;
