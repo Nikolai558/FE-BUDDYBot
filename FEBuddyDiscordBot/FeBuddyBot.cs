@@ -66,6 +66,7 @@ public class FeBuddyBot
         serviceProvider.GetRequiredService<InteractionHandler>();
         serviceProvider.GetRequiredService<CommandHandler>();
         serviceProvider.GetRequiredService<RoleAssignmentService>();
+        await serviceProvider.GetRequiredService<InteractionHandler>().InitializeAsync();
 
         // Start the bot log in process.
         await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);

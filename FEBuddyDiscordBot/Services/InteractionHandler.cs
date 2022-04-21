@@ -31,7 +31,7 @@ public class InteractionHandler
         _logger = _services.GetRequiredService<ILogger<InteractionHandler>>();
 
         // Subscribe to the Discord.Ready event
-        _discord.Ready += InitializeAsync;
+        //_discord.Ready += InitializeAsync;
 
         _logger.LogDebug("Loaded: InteractionHandler");
     }
@@ -40,7 +40,7 @@ public class InteractionHandler
     /// Initialize the Interaction handler. This can only be called once the Discord.Ready event is called.
     /// </summary>
     /// <returns>None</returns>
-    private async Task InitializeAsync()
+    public async Task InitializeAsync()
     {
         // Add the slash commands
         await _interactionCommands.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
