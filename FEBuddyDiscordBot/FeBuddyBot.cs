@@ -8,26 +8,38 @@ using Serilog;
 using Serilog.Events;
 
 namespace FEBuddyDiscordBot;
+
+/// <summary>
+/// Main class for the FE Buddy Discord Bot
+/// </summary>
 public class FeBuddyBot
 {
-    private static IConfiguration _config;
+    #pragma warning disable CS8618 // Disable annoying Visual Studio Warning
+    private static IConfiguration _config; // Private variable for our configuration settings for the bot.
 
+    /// <summary>
+    /// Create and start loading everything needed for our Discord Bot
+    /// </summary>
+    /// <returns>None</returns>
     public async Task StartAsync()
     {
+        // Load our configurations, Insert any User Secrets and build the Configuration.
         var _builder = new ConfigurationBuilder()
             .SetBasePath(AppContext.BaseDirectory)
             .AddJsonFile(path: "appsettings.json")
             .AddUserSecrets<Program>();
-
         _config = _builder.Build();
 
-        DiscordSocketConfig discordConfig = new DiscordSocketConfig()
+        // Specify the Discord Socket Client configurations
+        DiscordSocketConfig discordConfig = new()
         {
             GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
         };
 
-        DiscordSocketClient discordClient = new DiscordSocketClient(discordConfig);
+        // Create our Discord Client using the configurations above.
+        DiscordSocketClient discordClient = new(discordConfig);
 
+        // Dependency injection, add all of our services/modules needed to run the discord bot.
         var services = new ServiceCollection()
             .AddSingleton(discordClient)
             .AddSingleton(_config)
@@ -43,32 +55,40 @@ public class FeBuddyBot
             .AddSingleton<RoleAssignmentService>()
             .AddSingleton<VatusaApi>();
 
+        // Modify our servies
         ConfigureServices(services);
 
+        // Build the Dependency Injection service provider.
         var serviceProvider = services.BuildServiceProvider();
 
+        // Initialize required services/modules
         serviceProvider.GetRequiredService<LoggingService>();
-
         serviceProvider.GetRequiredService<InteractionHandler>();
-
         serviceProvider.GetRequiredService<CommandHandler>();
-
         serviceProvider.GetRequiredService<RoleAssignmentService>();
 
+        // Start the bot log in process.
         await serviceProvider.GetRequiredService<StartupService>().StartAsync(UseDevToken: true);
 
+        // Keep the application running until bot shuts down or crashes
         await Task.Delay(-1);
     }
 
-    private void ConfigureServices(IServiceCollection services)
+    /// <summary>
+    /// Configure Servies and set Log level and output.
+    /// </summary>
+    /// <param name="services">Dependency Injection Service Collection.</param>
+    private static void ConfigureServices(IServiceCollection services)
     {
+        // Configure Serilog
         services.AddLogging(configure => configure.AddSerilog());
 
+        // Remove HttpMessageHandler stuff, as it is very very verbose.
         services.RemoveAll<IHttpMessageHandlerBuilderFilter>();
 
+        // Load the log file from our configuration and set it.
         string logLevel = _config.GetRequiredSection("Logging").GetRequiredSection("LogLevel").Value;
         LogEventLevel level = LogEventLevel.Error;
-
         if (!string.IsNullOrEmpty(logLevel))
         {
             switch (logLevel.ToLower())
@@ -82,6 +102,7 @@ public class FeBuddyBot
             }
         }
 
+        // Tell the logger where to write logs to; write to a file and to the console. 
         Log.Logger = new LoggerConfiguration()
             .WriteTo.File("logs/fe-buddy-bot.log", rollingInterval: RollingInterval.Day)
             .WriteTo.Console()

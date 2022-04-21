@@ -10,15 +10,22 @@ using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
 
+/// <summary>
+/// User Discord Slash Commands and Interactions
+/// </summary>
 public class UserSlashCommands: InteractionModuleBase<SocketInteractionContext>
 {
-
+    // Dependency Injection Services Required
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
     private readonly IMongoGuildData _guildData;
 
+    /// <summary>
+    /// Initialize the User Slash Commands Module (This might be unnecessary)
+    /// </summary>
+    /// <param name="services">Dependency Injection Service Provider</param>
     public UserSlashCommands(IServiceProvider services)
     {
         _services = services;
@@ -30,6 +37,10 @@ public class UserSlashCommands: InteractionModuleBase<SocketInteractionContext>
         _logger.LogDebug("Module: Loaded UserSlashCommands");
     }
 
+    /// <summary>
+    /// Slash Command for Giving Roles/Permissions to the user performing the command.
+    /// </summary>
+    /// <returns>None</returns>
     [SlashCommand("give-role", "Get discord roles/permissions. Your Discord account must be linked on the VATUSA website.")]
     public async Task AssignRoles()
     {
