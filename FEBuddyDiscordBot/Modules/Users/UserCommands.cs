@@ -4,16 +4,24 @@ using FEBuddyDiscordBot.Services;
 
 namespace FEBuddyDiscordBot.Modules.Users;
 
+/// <summary>
+/// Discord User Commands
+/// </summary>
 [Name("User Commands")]
 [Summary("Helpful commands for All users in the Discord server!")]
 public class UserCommands : ModuleBase
 {
+    // Dependency Injection services Required
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
     private readonly DiscordSocketClient _discord;
     private readonly ILogger _logger;
     private readonly IMongoGuildData _guildData;
 
+    /// <summary>
+    /// Initialize the User Commands Module (This might be unnecessary)
+    /// </summary>
+    /// <param name="services">Dependency Injection Service Provider</param>
     public UserCommands(IServiceProvider services)
     {
         _services = services;
@@ -22,18 +30,24 @@ public class UserCommands : ModuleBase
         _logger = _services.GetRequiredService<ILogger<UserCommands>>();
         _guildData = _services.GetRequiredService<IMongoGuildData>();
 
-        _logger.LogInformation("Module: Loaded UserCommands");
+        _logger.LogDebug("Module: Loaded UserCommands");
     }
 
     // Discord Server User commands go here.
 
+    /// <summary>
+    /// Give Roles/Permissions to the user performing the command
+    /// </summary>
+    /// <returns>None</returns>
     [Command("give-roles", RunMode = RunMode.Async), Alias(new string[] {"gr", "give-role", "assign-roles", "assign-role" }), Name("Give-Roles"), Summary("Give Discord Server Roles Depending on VATUSA Status.")]
     public async Task AssignRoles()
     {
         if (Context.Channel is IGuildChannel)
         {
+            await Context.Message.DeleteAsync();
             GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
-            await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
+            EmbedBuilder embed = await _services.GetRequiredService<RoleAssignmentService>().GiveRole((SocketGuildUser)Context.User, guild);
+            await ReplyAsync(embed: embed.Build());
         }
         else
         {
