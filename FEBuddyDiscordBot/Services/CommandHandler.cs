@@ -45,7 +45,7 @@ public class CommandHandler
 
         var context = new CommandContext(_discord, message);
 
-        char prefix = Char.Parse(guild?.Settings.Prefix ?? "!");
+        char prefix = Char.Parse(guild?.Settings.Prefix ?? _config.GetRequiredSection("DefaultBotSettings").GetRequiredSection("Prefix").Value);
 
         if(!message.HasCharPrefix(prefix, ref argPosition)) return;
 

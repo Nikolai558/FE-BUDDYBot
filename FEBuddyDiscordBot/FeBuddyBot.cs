@@ -10,6 +10,7 @@ using Serilog.Events;
 namespace FEBuddyDiscordBot;
 public class FeBuddyBot
 {
+    #pragma warning disable CS8618
     private static IConfiguration _config;
 
     public async Task StartAsync()
@@ -21,12 +22,12 @@ public class FeBuddyBot
 
         _config = _builder.Build();
 
-        DiscordSocketConfig discordConfig = new DiscordSocketConfig()
+        DiscordSocketConfig discordConfig = new()
         {
             GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
         };
 
-        DiscordSocketClient discordClient = new DiscordSocketClient(discordConfig);
+        DiscordSocketClient discordClient = new(discordConfig);
 
         var services = new ServiceCollection()
             .AddSingleton(discordClient)
@@ -60,7 +61,7 @@ public class FeBuddyBot
         await Task.Delay(-1);
     }
 
-    private void ConfigureServices(IServiceCollection services)
+    private static void ConfigureServices(IServiceCollection services)
     {
         services.AddLogging(configure => configure.AddSerilog());
 

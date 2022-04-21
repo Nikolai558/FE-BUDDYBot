@@ -1,4 +1,6 @@
 ﻿namespace FEBuddyDiscordBot.Models;
+#pragma warning disable IDE1006
+
 public class VatusaUserModel
 {
 

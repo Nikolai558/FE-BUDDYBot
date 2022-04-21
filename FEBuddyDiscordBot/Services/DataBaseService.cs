@@ -15,7 +15,7 @@ public class DataBaseService
     private readonly IServiceProvider _services;
     private readonly IConfiguration _config;
     private readonly ILogger _logger;
-    private IMongoGuildData _guildData;
+    private readonly IMongoGuildData _guildData;
 
     public DataBaseService(IServiceProvider services)
     {
@@ -40,7 +40,7 @@ public class DataBaseService
             {
                 _logger.LogInformation($"DataBase: Did NOT find Guild, {guild.Name} ({guild.Id}), in DB");
 
-                GuildSettings defaultSettings = new GuildSettings
+                GuildSettings defaultSettings = new()
                 {
                     Prefix = _config.GetSection("DefaultBotSettings").GetSection("Prefix").Value,
 
@@ -58,7 +58,7 @@ public class DataBaseService
                     RolesTextChannelName = _config.GetSection("DefaultBotSettings").GetSection("RolesTextChannelName").Value,
                 };
 
-                GuildModel newGuild = new GuildModel
+                GuildModel newGuild = new()
                 {
                     GuildId = guild.Id,
                     GuildName = guild.Name,

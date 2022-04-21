@@ -5,22 +5,21 @@ using static FEBuddyDiscordBot.Models.VatusaUserModel;
 namespace FEBuddyDiscordBot.DataAccess;
 public class VatusaApi
 {
-    public async Task<VatusaUserData?> GetVatusaUserInfo(ulong MemberId)
+    public static async Task<VatusaUserData?> GetVatusaUserInfo(ulong MemberId)
     {
         string url = $"https://api.vatusa.net/v2/user/{MemberId}?d";
 
-        using (HttpClient httpClient = new HttpClient())
+        using HttpClient httpClient = new();
+        
+        try
         {
-            try
-            {
-                string json = await httpClient.GetStringAsync(url);
-                VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(json);
-                return userData;
-            }
-            catch (WebException)
-            {
-                return null;
-            }
+            string json = await httpClient.GetStringAsync(url);
+            VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(json);
+            return userData;
+        }
+        catch (WebException)
+        {
+            return null;
         }
     }
 }

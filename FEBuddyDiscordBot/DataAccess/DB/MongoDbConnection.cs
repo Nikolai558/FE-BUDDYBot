@@ -4,7 +4,7 @@ using FEBuddyDiscordBot.Models;
 namespace FEBuddyDiscordBot.DataAccess.DB;
 public class MongoDbConnection : IMongoDbConnection
 {
-    private string _connectionId = "MongoDB";
+    private readonly string _connectionId = "MongoDB";
     private readonly IConfiguration _config;
     private readonly IMongoDatabase _db;
 

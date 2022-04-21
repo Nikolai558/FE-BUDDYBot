@@ -2,6 +2,8 @@
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace FEBuddyDiscordBot.Models;
+#pragma warning disable CS8618
+
 public class GuildModel
 {
     [BsonId]
