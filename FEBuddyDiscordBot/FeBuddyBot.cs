@@ -8,6 +8,10 @@ using Serilog;
 using Serilog.Events;
 
 namespace FEBuddyDiscordBot;
+
+/// <summary>
+/// Main class for the FE Buddy Discord Bot
+/// </summary>
 public class FeBuddyBot
 {
     #pragma warning disable CS8618 // Disable annoying Visual Studio Warning
