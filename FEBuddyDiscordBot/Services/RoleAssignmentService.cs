@@ -198,7 +198,13 @@ public class RoleAssignmentService
 
         if (userData.data?.roles?.Length >= 1)
         {
-            return true;
+            foreach (StaffRole role in userData.data.roles)
+            {
+                if (new string[] { "ATM", "DATM", "TA", "EC", "FE", "WM" }.Contains(role.role))
+                {
+                    return true;
+                }
+            }
         }
 
         return false;
