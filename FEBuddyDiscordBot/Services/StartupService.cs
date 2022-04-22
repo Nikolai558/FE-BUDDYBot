@@ -40,7 +40,7 @@ public class StartupService
     private async Task JoinedNewGuild(SocketGuild arg)
     {
 #pragma warning disable CS4014
-        _dataBaseService.CheckGuild(arg)
+        _dataBaseService.CheckGuilds(new List<SocketGuild>() { arg })
             .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
 #pragma warning restore CS4014
 
@@ -80,7 +80,7 @@ public class StartupService
     private async Task DiscordReady()
     {
         // Get a list of guilds (discord servers) the bot is currently in.
-        IReadOnlyCollection<SocketGuild>? currentGuilds = _discord.Guilds;
+        List<SocketGuild>? currentGuilds = _discord.Guilds.ToList();
 
         // For development only! For production use await _interactionService.RegisterCommandsGloballyAsync(); instead of foreach loop.
         foreach (var guild in currentGuilds)
