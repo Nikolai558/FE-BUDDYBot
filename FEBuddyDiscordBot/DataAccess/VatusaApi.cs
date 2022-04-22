@@ -19,7 +19,7 @@ public class VatusaApi
         string url = $"https://api.vatusa.net/v2/user/{MemberId}?d";
 
         using HttpClient httpClient = new();
-        
+
         try
         {
             string json = await httpClient.GetStringAsync(url);

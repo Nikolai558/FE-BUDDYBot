@@ -1,11 +1,6 @@
 ﻿using Discord.Interactions;
 using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Modals;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands.AdminComponents;
 public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
@@ -39,7 +34,7 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
     {
         switch (option)
         {
-            case "changeDiscordEvents": await RespondWithModalAsync<ConfigModal_DiscordEvents>("configModal_DiscordEvents");  break;
+            case "changeDiscordEvents": await RespondWithModalAsync<ConfigModal_DiscordEvents>("configModal_DiscordEvents"); break;
             case "changeRoleNames": await RespondWithModalAsync<ConfigModal_RoleNames>("configModal_RoleNames"); break;
             case "changeChannelNames": await RespondWithModalAsync<ConfigModal_ChannelNames>("configModal_ChannelNames"); break;
             default: await RespondAsync("Invalid Menu Option...Something went wrong, sorry."); break;

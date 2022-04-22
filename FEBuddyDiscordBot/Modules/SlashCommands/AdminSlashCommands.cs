@@ -10,7 +10,7 @@ namespace FEBuddyDiscordBot.Modules.SlashCommands;
 [Discord.Interactions.Group("admin", "Discord Administrator Only Commands")]
 [Discord.Interactions.RequireUserPermission(GuildPermission.Administrator, Group = "AdminPermission")]
 [Discord.Interactions.RequireOwner(Group = "AdminPermission")]
-public class AdminSlashCommands: InteractionModuleBase<SocketInteractionContext>
+public class AdminSlashCommands : InteractionModuleBase<SocketInteractionContext>
 {
     // Dependency Injection Services Required
     private readonly IServiceProvider _services;
@@ -33,7 +33,7 @@ public class AdminSlashCommands: InteractionModuleBase<SocketInteractionContext>
 
         _logger.LogDebug("Module: Loaded AdminSlashCommands");
     }
-    
+
     [SlashCommand("config", "Setup/Modify configuration settings for this bot in this discord server.")]
     public async Task ConfigureServerSettings()
     {
@@ -53,7 +53,7 @@ public class AdminSlashCommands: InteractionModuleBase<SocketInteractionContext>
 
         var component = new ComponentBuilder()
             .WithSelectMenu(menu);
-        
+
         await FollowupAsync(embed: configEmbed.Build(), components: component.Build(), ephemeral: true);
     }
 

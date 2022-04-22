@@ -2,18 +2,13 @@
 using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Models;
 using FEBuddyDiscordBot.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
 
 /// <summary>
 /// User Discord Slash Commands and Interactions
 /// </summary>
-public class UserSlashCommands: InteractionModuleBase<SocketInteractionContext>
+public class UserSlashCommands : InteractionModuleBase<SocketInteractionContext>
 {
     // Dependency Injection Services Required
     private readonly IServiceProvider _services;

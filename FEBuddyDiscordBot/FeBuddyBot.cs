@@ -14,7 +14,7 @@ namespace FEBuddyDiscordBot;
 /// </summary>
 public class FeBuddyBot
 {
-    #pragma warning disable CS8618 // Disable annoying Visual Studio Warning
+#pragma warning disable CS8618 // Disable annoying Visual Studio Warning
     private static IConfiguration _config; // Private variable for our configuration settings for the bot.
 
     /// <summary>

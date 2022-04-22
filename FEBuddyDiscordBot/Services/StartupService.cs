@@ -39,10 +39,10 @@ public class StartupService
 
     private async Task JoinedNewGuild(SocketGuild arg)
     {
-        #pragma warning disable CS4014
+#pragma warning disable CS4014
         _dataBaseService.CheckGuild(arg)
             .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
-        #pragma warning restore CS4014
+#pragma warning restore CS4014
 
         await _interactionService.RegisterCommandsToGuildAsync(arg.Id);
     }
@@ -89,11 +89,11 @@ public class StartupService
             await _interactionService.RegisterCommandsToGuildAsync(guild.Id);
         }
 
-        #pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
+#pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
         // Check the database to make sure all current guilds have at least the default configurations set.
         _dataBaseService.CheckGuilds(currentGuilds)
             .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
-        #pragma warning restore CS4014
+#pragma warning restore CS4014
 
     }
 }

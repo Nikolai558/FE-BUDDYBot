@@ -1,12 +1,7 @@
 ﻿using Discord.Interactions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modals;
-public class ConfigModal_DiscordEvents :IModal
+public class ConfigModal_DiscordEvents : IModal
 {
     public string Title => "Discord Event Server Configuration";
 
