@@ -32,8 +32,19 @@ public class StartupService
         _dataBaseService = _services.GetRequiredService<DataBaseService>();
 
         _discord.Ready += DiscordReady;
+        _discord.JoinedGuild += JoinedNewGuild;
 
         _logger.LogDebug("Loaded: StartupService");
+    }
+
+    private async Task JoinedNewGuild(SocketGuild arg)
+    {
+        #pragma warning disable CS4014
+        _dataBaseService.CheckGuild(arg)
+            .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
+        #pragma warning restore CS4014
+
+        await _interactionService.RegisterCommandsToGuildAsync(arg.Id);
     }
 
     /// <summary>
