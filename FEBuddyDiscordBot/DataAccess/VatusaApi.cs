@@ -31,27 +31,4 @@ public class VatusaApi
             return null;
         }
     }
-
-    /// <summary>
-    /// Get the User information from the users VATUSA CID Number.
-    /// </summary>
-    /// <param name="cid">User's CID Number</param>
-    /// <returns>VATUSA User Data Model</returns>
-    public static async Task<VatusaUserData?> GetVatusaUserInfo(string cid)
-    {
-        string url = $"https://api.vatusa.net/v2/user/{cid}";
-
-        using HttpClient httpClient = new();
-
-        try
-        {
-            string json = await httpClient.GetStringAsync(url);
-            VatusaUserData? userData = JsonSerializer.Deserialize<VatusaUserData>(json);
-            return userData;
-        }
-        catch (WebException)
-        {
-            return null;
-        }
-    }
 }
