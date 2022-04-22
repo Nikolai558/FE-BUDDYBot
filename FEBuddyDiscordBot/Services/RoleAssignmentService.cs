@@ -105,14 +105,14 @@ public class RoleAssignmentService
         };
 
         VatusaUserData? userModel = await VatusaApi.GetVatusaUserInfo(User.Id);
-        
+
         string guildName = User.Guild.Name;
 
         if (userModel == null && SendDM_OnVatusaNotFound)
         {
             SocketGuildChannel rolesChannel = User.Guild.Channels.First(x => x.Name == Guild.Settings.RolesTextChannelName);
 
-            string linkInstructions = 
+            string linkInstructions =
                 $"Hello, I am an automated program that is here to help you get your `{guildName}` Discord permissions/roles setup.\n\n" +
                 "To do this, I need you to sync your Discord account with the VATUSA Discord server; You may do this by going to your VATUSA profile https://vatusa.net/my/profile > “VATUSA Discord Link”.\n\n" +
                 $"When you are complete, join a voice channel or go to the <#{rolesChannel.Id}> channel in the `{guildName}` discord server and complete the `{Guild.Settings.Prefix}GR` command.\n\n" +
@@ -120,7 +120,7 @@ public class RoleAssignmentService
 
             await User.CreateDMChannelAsync().Result.SendMessageAsync(linkInstructions);
             _logger.LogInformation($"No Role: {User.Username} ({User.Id}) in {User.Guild.Name} -> Not found in VATUSA, no roles were assigned.");
-            
+
             embed.Title = "Not Linked";
             embed.Description = "Your Discord account is not linked on VATUSA. Link it here: \nhttps://vatusa.net/my/profile";
             embed.Color = Color.Red;
@@ -194,7 +194,7 @@ public class RoleAssignmentService
     /// <returns>True if the user has a staff role, otherwise returns false.</returns>
     private static bool HasArtccStaffRole(VatusaUserData userData)
     {
-        if(userData == null) return false;
+        if (userData == null) return false;
 
         if (userData.data?.roles?.Length >= 1)
         {

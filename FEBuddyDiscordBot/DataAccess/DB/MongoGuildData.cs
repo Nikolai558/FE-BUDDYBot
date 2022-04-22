@@ -1,10 +1,5 @@
 ﻿using FEBuddyDiscordBot.Models;
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.DataAccess.DB;
 
@@ -23,7 +18,7 @@ public class MongoGuildData : IMongoGuildData
     {
         _guilds = db.GuildCollection;
     }
-    
+
     /// <summary>
     /// Get all guilds from the database
     /// </summary>

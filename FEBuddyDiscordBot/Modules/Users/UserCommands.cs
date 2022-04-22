@@ -39,7 +39,7 @@ public class UserCommands : ModuleBase
     /// Give Roles/Permissions to the user performing the command
     /// </summary>
     /// <returns>None</returns>
-    [Command("give-roles", RunMode = RunMode.Async), Alias(new string[] {"gr", "give-role", "assign-roles", "assign-role" }), Name("Give-Roles"), Summary("Give Discord Server Roles Depending on VATUSA Status.")]
+    [Command("give-roles", RunMode = RunMode.Async), Alias(new string[] { "gr", "give-role", "assign-roles", "assign-role" }), Name("Give-Roles"), Summary("Give Discord Server Roles Depending on VATUSA Status.")]
     public async Task AssignRoles()
     {
         if (Context.Channel is IGuildChannel)

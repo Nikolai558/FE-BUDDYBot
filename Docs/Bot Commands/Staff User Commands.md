@@ -1,4 +1,4 @@
 # Discord Staff User Commands
-## No commands at this time.
+## No commands at this time
 
 ---

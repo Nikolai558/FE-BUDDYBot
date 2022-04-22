@@ -1,5 +1,5 @@
-﻿using MongoDB.Driver;
-using FEBuddyDiscordBot.Models;
+﻿using FEBuddyDiscordBot.Models;
+using MongoDB.Driver;
 
 namespace FEBuddyDiscordBot.DataAccess.DB;
 
