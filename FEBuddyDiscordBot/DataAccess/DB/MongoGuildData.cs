@@ -42,7 +42,7 @@ public class MongoGuildData : IMongoGuildData
     public async Task<GuildModel> GetGuildAsync(ulong id)
     {
         var results = await _guilds.FindAsync(guild => guild.GuildId == id);
-        return results.First();
+        return results.FirstOrDefault();
     }
 
     /// <summary>
