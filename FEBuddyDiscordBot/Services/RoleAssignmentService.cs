@@ -181,7 +181,7 @@ public class RoleAssignmentService
             if (ex.Message.Contains("Missing Permissions"))
             {
                 _logger.LogWarning($"Missing Permissions: Could not change Nickname for {User.Username} ({User.Id}) in {User.Guild.Name}");
-                return "I could not change your nikname.";
+                return "I could not change your nickname.";
             }
             throw;
         }
