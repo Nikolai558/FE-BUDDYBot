@@ -24,12 +24,6 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
         _logger.LogDebug("Module: Loaded ConfigComponents");
     }
 
-    [ComponentInteraction("button")]
-    public async Task HandleButtonInput()
-    {
-        await RespondWithModalAsync<ConfigModal_DiscordEvents>("config_modal");
-    }
-
     [ComponentInteraction("configMenu")]
     public async Task HandleMenuSelection(string option)
     {

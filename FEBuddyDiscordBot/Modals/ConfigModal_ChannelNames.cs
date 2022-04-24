@@ -8,9 +8,11 @@ public class ConfigModal_ChannelNames : IModal
 
     [InputLabel("Private Meeting Voice Channel Name")]
     [ModalTextInput("PrivateMeetingVoiceChannelName", TextInputStyle.Short, maxLength: 50)]
+    [RequiredInput(false)]
     public string PrivateMeetingVoiceChannelName { get; set; }
 
     [InputLabel("Roles Text Channel Name")]
     [ModalTextInput("RolesTextChannelName", TextInputStyle.Short, maxLength: 50)]
+    [RequiredInput(false)]
     public string RolesTextChannelName { get; set; }
 }
