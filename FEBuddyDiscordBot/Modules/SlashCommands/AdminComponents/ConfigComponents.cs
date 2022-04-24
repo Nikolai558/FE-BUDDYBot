@@ -1,6 +1,7 @@
 ﻿using Discord.Interactions;
 using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Modals;
+using FEBuddyDiscordBot.Models;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands.AdminComponents;
 public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
@@ -45,7 +46,32 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
     public async Task ChangeDiscordEventsConfig(ConfigModal_DiscordEvents modal)
     {
         await DeferAsync(ephemeral: true);
-        await FollowupAsync("Nothing really changed, this functionality is still under development...", ephemeral: true);
+        GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
+
+        try
+        {
+            guild.Settings.AutoAssignRoles_OnJoin = bool.Parse(modal.AutoAssignRoles_OnJoin);
+            guild.Settings.AutoAssignRoles_OnVoiceChannelJoin = bool.Parse(modal.AutoAssignRoles_OnVoiceChannelJoin);
+            guild.Settings.AssignPrivateMeetingRole_OnVoiceChannelJoin = bool.Parse(modal.AssignPrivateMeetingRole_OnVoiceChannelJoin);
+            guild.Settings.AutoChangeNicknames = bool.Parse(modal.AutoChangeNicknames);
+            guild.Settings.AssignArtccStaffRole = bool.Parse(modal.AssignArtccStaffRole);
+        }
+        catch (FormatException ex)
+        {
+            _logger.LogDebug("Config: " + ex.Message);
+            await FollowupAsync("Could not parse one or more of your settings. Please try again.", ephemeral: true);
+            return;
+        }
+        catch (ArgumentNullException ex)
+        {
+            _logger.LogDebug("Config: " + ex.Message);
+            await FollowupAsync("Could not parse one or more of your settings. Please try again.", ephemeral: true);
+            return;
+        }
+
+        await _guildData.UpdateGuild(guild);
+
+        await FollowupAsync("Configuration for Discord events have been updated.", ephemeral: true);
     }
 
     [ModalInteraction("configModal_RoleNames")]
