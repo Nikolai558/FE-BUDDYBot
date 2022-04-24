@@ -86,7 +86,7 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
             guild.Settings.VerifiedRoleName = Context.Guild.Roles.First(x => x.Name == modal.VerifiedRoleName).Name;
             guild.Settings.ArtccStaffRoleName = Context.Guild.Roles.First(x => x.Name == modal.ArtccStaffRoleName).Name;
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             _logger.LogDebug("Config: " + ex.Message);
             await FollowupAsync("One or more of the roles you defined could not be found in your discord. \n" +
@@ -103,6 +103,23 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
     public async Task ChangeChannelNamesConfig(ConfigModal_ChannelNames modal)
     {
         await DeferAsync(ephemeral: true);
-        await FollowupAsync("Nothing really changed, this functionality is still under development...", ephemeral: true);
+        GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
+
+        try
+        {
+            guild.Settings.PrivateMeetingVoiceChannelName = Context.Guild.Channels.First(x => x.Name == modal.PrivateMeetingVoiceChannelName).Name;
+            guild.Settings.RolesTextChannelName = Context.Guild.Channels.First(x => x.Name == modal.RolesTextChannelName).Name;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogDebug("Config: " + ex.Message);
+            await FollowupAsync("One or more of the channels you defined could not be found in your discord. \n" +
+                "Please verify these channels exist. Note: These are case sensitive.", ephemeral: true);
+            return;
+        }
+
+        await _guildData.UpdateGuild(guild);
+
+        await FollowupAsync("Configuration for Discord Channels have been updated.", ephemeral: true);
     }
 }
