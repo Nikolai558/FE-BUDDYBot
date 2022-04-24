@@ -58,18 +58,20 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
         }
         catch (FormatException ex)
         {
-            _logger.LogDebug("Config: " + ex.Message);
+            _logger.LogDebug($"Config: FormatException for {guild.GuildName}" + ex.Message);
             await FollowupAsync("Could not parse one or more of your settings. Please try again.", ephemeral: true);
             return;
         }
         catch (ArgumentNullException ex)
         {
-            _logger.LogDebug("Config: " + ex.Message);
+            _logger.LogDebug($"Config: ArgumentNullException for {guild.GuildName}" + ex.Message);
             await FollowupAsync("Could not parse one or more of your settings. Please try again.", ephemeral: true);
             return;
         }
 
         await _guildData.UpdateGuild(guild);
+
+        _logger.LogInformation($"Config: Discord events updated for {guild.GuildName}");
 
         await FollowupAsync("Configuration for Discord events have been updated.", ephemeral: true);
     }
@@ -88,13 +90,15 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogDebug("Config: " + ex.Message);
+            _logger.LogDebug($"Config: InvalidOperationException for {guild.GuildName}" + ex.Message);
             await FollowupAsync("One or more of the roles you defined could not be found in your discord. \n" +
                 "Please verify these roles exist. Note: These are case sensitive.", ephemeral: true);
             return;
         }
 
         await _guildData.UpdateGuild(guild);
+        _logger.LogInformation($"Config: Discord Roles updated for {guild.GuildName}");
+
 
         await FollowupAsync("Configuration for Discord Roles have been updated.", ephemeral: true);
     }
@@ -112,13 +116,15 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogDebug("Config: " + ex.Message);
+            _logger.LogDebug($"Config: InvalidOperationException for {guild.GuildName}" + ex.Message);
             await FollowupAsync("One or more of the channels you defined could not be found in your discord. \n" +
                 "Please verify these channels exist. Note: These are case sensitive.", ephemeral: true);
             return;
         }
 
         await _guildData.UpdateGuild(guild);
+        _logger.LogInformation($"Config: Discord Channels updated for {guild.GuildName}");
+
 
         await FollowupAsync("Configuration for Discord Channels have been updated.", ephemeral: true);
     }
