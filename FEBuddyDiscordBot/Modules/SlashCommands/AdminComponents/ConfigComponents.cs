@@ -78,7 +78,25 @@ public class ConfigComponents : InteractionModuleBase<SocketInteractionContext>
     public async Task ChangeRoleNamesConfig(ConfigModal_RoleNames modal)
     {
         await DeferAsync(ephemeral: true);
-        await FollowupAsync("Nothing really changed, this functionality is still under development...", ephemeral: true);
+        GuildModel guild = await _guildData.GetGuildAsync(Context.Guild.Id);
+
+        try
+        {
+            guild.Settings.PrivateMeetingRole = Context.Guild.Roles.First(x => x.Name == modal.PrivateMeetingRole).Name;
+            guild.Settings.VerifiedRoleName = Context.Guild.Roles.First(x => x.Name == modal.VerifiedRoleName).Name;
+            guild.Settings.ArtccStaffRoleName = Context.Guild.Roles.First(x => x.Name == modal.ArtccStaffRoleName).Name;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug("Config: " + ex.Message);
+            await FollowupAsync("One or more of the roles you defined could not be found in your discord. \n" +
+                "Please verify these roles exist. Note: These are case sensitive.", ephemeral: true);
+            return;
+        }
+
+        await _guildData.UpdateGuild(guild);
+
+        await FollowupAsync("Configuration for Discord Roles have been updated.", ephemeral: true);
     }
 
     [ModalInteraction("configModal_ChannelNames")]
