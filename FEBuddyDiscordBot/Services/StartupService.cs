@@ -17,6 +17,8 @@ public class StartupService
     private readonly InteractionService _interactionService;
     private readonly DataBaseService _dataBaseService;
 
+    private int _disconnectCount = 0;
+
     /// <summary>
     /// Constructor for the Bot Startup Service
     /// </summary>
@@ -34,7 +36,27 @@ public class StartupService
         _discord.Ready += DiscordReady;
         _discord.JoinedGuild += JoinedNewGuild;
 
+        _discord.Disconnected += BotDisconected;
+
         _logger.LogDebug("Loaded: StartupService");
+    }
+
+    private Task BotDisconected(Exception arg)
+    {
+
+        _logger.LogWarning("Gateway Disconnect: Bot disconected");
+        if (_discord.ConnectionState == ConnectionState.Disconnecting)
+        {
+            _disconnectCount += 1;
+        }
+
+        if (_discord.ConnectionState == ConnectionState.Disconnected || _disconnectCount > 3)
+        {
+            _logger.LogCritical("Gateway Disconnect: Bot disconected - Disconnecting Call limit reached, App exiting.");
+            Environment.Exit(1);
+        }
+
+        return Task.CompletedTask;
     }
 
     private async Task JoinedNewGuild(SocketGuild arg)
@@ -79,6 +101,8 @@ public class StartupService
     /// <returns>None</returns>
     private async Task DiscordReady()
     {
+        _disconnectCount = 0;
+
         // Get a list of guilds (discord servers) the bot is currently in.
         List<SocketGuild>? currentGuilds = _discord.Guilds.ToList();
 
