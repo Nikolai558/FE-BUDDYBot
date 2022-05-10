@@ -1,3 +1,5 @@
+# Bot Commands and Events
+
 ## [Standard User Commands](https://github.com/Nikolai558/FE-BUDDYBot/blob/releases/Docs/Bot%20Commands/Standard%20User%20Commands.md)
 
 ## [Discord Server Staff Commands](https://github.com/Nikolai558/FE-BUDDYBot/blob/releases/Docs/Bot%20Commands/Staff%20User%20Commands.md)

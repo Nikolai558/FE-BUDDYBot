@@ -6,7 +6,7 @@
 [Name("Admin Commands")]
 [Summary("These commands are to assist the Administrators of the server.")]
 [RequireUserPermission(Discord.GuildPermission.Administrator)]
-public class AdminCommands: ModuleBase
+public class AdminCommands : ModuleBase
 {
     // Dependency Injection services Required
     private readonly IServiceProvider _services;

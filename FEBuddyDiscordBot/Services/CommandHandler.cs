@@ -49,7 +49,7 @@ public class CommandHandler
         if (message.Source != MessageSource.User) return; // Only respond to user messages
 
         SocketGuildChannel? channel = message.Channel as SocketGuildChannel;
-        
+
         if (channel != null) // Make sure we are in a discord server channel (not DM to bot)
         {
             guild = await _guildData.GetGuildAsync(channel.Guild.Id); // Load configuration from Database
@@ -61,7 +61,7 @@ public class CommandHandler
 
         char prefix = Char.Parse(guild?.Settings.Prefix ?? _config.GetRequiredSection("DefaultBotSettings").GetRequiredSection("Prefix").Value);
 
-        if(!message.HasCharPrefix(prefix, ref argPosition)) return; // Message does not have the guild command prefix so do nothing
+        if (!message.HasCharPrefix(prefix, ref argPosition)) return; // Message does not have the guild command prefix so do nothing
 
         var result = await _commands.ExecuteAsync(context, argPosition, _services); // Execute the command
 

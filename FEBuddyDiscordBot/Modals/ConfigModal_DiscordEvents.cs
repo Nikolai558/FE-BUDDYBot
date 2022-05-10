@@ -1,17 +1,12 @@
 ﻿using Discord.Interactions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Modals;
-public class ConfigModal_DiscordEvents :IModal
+public class ConfigModal_DiscordEvents : IModal
 {
     public string Title => "Discord Event Server Configuration";
 
     [InputLabel("Assign Roles on Join")]
-    [ModalTextInput("AutoAssignRoles_OnJoin", TextInputStyle.Short, placeholder: "True or False", minLength: 0, maxLength: 5)]
+    [ModalTextInput("AutoAssignRoles_OnJoin", TextInputStyle.Short, placeholder: "True or False", minLength: 4, maxLength: 5)]
     public string AutoAssignRoles_OnJoin { get; set; }
 
     [InputLabel("Assign Roles on VC Connect")]

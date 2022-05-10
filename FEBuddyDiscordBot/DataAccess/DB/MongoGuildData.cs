@@ -1,10 +1,5 @@
 ﻿using FEBuddyDiscordBot.Models;
 using MongoDB.Driver;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.DataAccess.DB;
 
@@ -23,7 +18,7 @@ public class MongoGuildData : IMongoGuildData
     {
         _guilds = db.GuildCollection;
     }
-    
+
     /// <summary>
     /// Get all guilds from the database
     /// </summary>
@@ -42,7 +37,7 @@ public class MongoGuildData : IMongoGuildData
     public async Task<GuildModel> GetGuildAsync(ulong id)
     {
         var results = await _guilds.FindAsync(guild => guild.GuildId == id);
-        return results.First();
+        return results.FirstOrDefault();
     }
 
     /// <summary>
@@ -62,7 +57,7 @@ public class MongoGuildData : IMongoGuildData
     /// <returns>None</returns>
     public Task UpdateGuild(GuildModel guild)
     {
-        var filter = Builders<GuildModel>.Filter.Eq("Id", guild.GuildId);
+        var filter = Builders<GuildModel>.Filter.Eq("GuildId", guild.GuildId);
         return _guilds.ReplaceOneAsync(filter, guild, new ReplaceOptions { IsUpsert = true });
     }
 }

@@ -17,6 +17,8 @@ public class StartupService
     private readonly InteractionService _interactionService;
     private readonly DataBaseService _dataBaseService;
 
+    private int _disconnectCount = 0;
+
     /// <summary>
     /// Constructor for the Bot Startup Service
     /// </summary>
@@ -32,8 +34,39 @@ public class StartupService
         _dataBaseService = _services.GetRequiredService<DataBaseService>();
 
         _discord.Ready += DiscordReady;
+        _discord.JoinedGuild += JoinedNewGuild;
+
+        _discord.Disconnected += BotDisconected;
 
         _logger.LogDebug("Loaded: StartupService");
+    }
+
+    private Task BotDisconected(Exception arg)
+    {
+
+        _logger.LogWarning("Gateway Disconnect: Bot disconected");
+        if (_discord.ConnectionState == ConnectionState.Disconnecting)
+        {
+            _disconnectCount += 1;
+        }
+
+        if (_discord.ConnectionState == ConnectionState.Disconnected || _disconnectCount > 3)
+        {
+            _logger.LogCritical("Gateway Disconnect: Bot disconected - Disconnecting Call limit reached, App exiting.");
+            Environment.Exit(1);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private async Task JoinedNewGuild(SocketGuild arg)
+    {
+#pragma warning disable CS4014
+        _dataBaseService.CheckGuilds(new List<SocketGuild>() { arg })
+            .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
+#pragma warning restore CS4014
+
+        await _interactionService.RegisterCommandsToGuildAsync(arg.Id);
     }
 
     /// <summary>
@@ -68,8 +101,10 @@ public class StartupService
     /// <returns>None</returns>
     private async Task DiscordReady()
     {
+        _disconnectCount = 0;
+
         // Get a list of guilds (discord servers) the bot is currently in.
-        IReadOnlyCollection<SocketGuild>? currentGuilds = _discord.Guilds;
+        List<SocketGuild>? currentGuilds = _discord.Guilds.ToList();
 
         // For development only! For production use await _interactionService.RegisterCommandsGloballyAsync(); instead of foreach loop.
         foreach (var guild in currentGuilds)
@@ -78,11 +113,11 @@ public class StartupService
             await _interactionService.RegisterCommandsToGuildAsync(guild.Id);
         }
 
-        #pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
+#pragma warning disable CS4014 // Don't want to await this because it will block the discord gateway tasks. We only want to log any errors that come with it
         // Check the database to make sure all current guilds have at least the default configurations set.
         _dataBaseService.CheckGuilds(currentGuilds)
             .ContinueWith(t => _logger.LogWarning(t.Exception?.Message), TaskContinuationOptions.OnlyOnFaulted);
-        #pragma warning restore CS4014
+#pragma warning restore CS4014
 
     }
 }

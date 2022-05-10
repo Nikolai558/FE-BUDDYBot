@@ -1,13 +1,5 @@
 ﻿using FEBuddyDiscordBot.DataAccess.DB;
 using FEBuddyDiscordBot.Models;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FEBuddyDiscordBot.Services;
 
@@ -41,7 +33,7 @@ public class DataBaseService
     /// </summary>
     /// <param name="guildList">Socket Guild List/Collection</param>
     /// <returns>None</returns>
-    public async Task CheckGuilds(IReadOnlyCollection<SocketGuild> guildList)
+    public async Task CheckGuilds(List<SocketGuild> guildList)
     {
         foreach (var guild in guildList)
         {
@@ -65,10 +57,10 @@ public class DataBaseService
                     AssignPrivateMeetingRole_OnVoiceChannelJoin = bool.Parse(_config.GetSection("DefaultBotSettings").GetSection("AssignPrivateMeetingRole_OnVoiceChannelJoin").Value),
                     AutoChangeNicknames = bool.Parse(_config.GetSection("DefaultBotSettings").GetSection("AutoChangeNicknames").Value),
                     AssignArtccStaffRole = bool.Parse(_config.GetSection("DefaultBotSettings").GetSection("AssignArtccStaffRole").Value),
-                    
+
                     PrivateMeetingVoiceChannelName = _config.GetSection("DefaultBotSettings").GetSection("PrivateMeetingVoiceChannelName").Value,
                     PrivateMeetingRole = _config.GetSection("DefaultBotSettings").GetSection("PrivateMeetingRole").Value,
-                    
+
                     VerifiedRoleName = _config.GetSection("DefaultBotSettings").GetSection("VerifiedRole").Value,
                     ArtccStaffRoleName = _config.GetSection("DefaultBotSettings").GetSection("ArtccStaffRoleName").Value,
                     RolesTextChannelName = _config.GetSection("DefaultBotSettings").GetSection("RolesTextChannelName").Value,
