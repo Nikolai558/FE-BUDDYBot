@@ -57,7 +57,7 @@ public class MongoGuildData : IMongoGuildData
     /// <returns>None</returns>
     public Task UpdateGuild(GuildModel guild)
     {
-        var filter = Builders<GuildModel>.Filter.Eq("Id", guild.GuildId);
+        var filter = Builders<GuildModel>.Filter.Eq("GuildId", guild.GuildId);
         return _guilds.ReplaceOneAsync(filter, guild, new ReplaceOptions { IsUpsert = true });
     }
 }

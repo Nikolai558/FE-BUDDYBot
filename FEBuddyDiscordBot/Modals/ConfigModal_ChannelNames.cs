@@ -7,10 +7,12 @@ public class ConfigModal_ChannelNames : IModal
     public string Title => "Discord Channel Name Server Configuration";
 
     [InputLabel("Private Meeting Voice Channel Name")]
-    [ModalTextInput("PrivateMeetingVoiceChannelName", TextInputStyle.Short, maxLength: 50)]
+    [ModalTextInput("PrivateMeetingVoiceChannelName", TextInputStyle.Short, maxLength: 50, placeholder: "Private Meeting Voice Channel")]
+    [RequiredInput(false)]
     public string PrivateMeetingVoiceChannelName { get; set; }
 
     [InputLabel("Roles Text Channel Name")]
-    [ModalTextInput("RolesTextChannelName", TextInputStyle.Short, maxLength: 50)]
+    [ModalTextInput("RolesTextChannelName", TextInputStyle.Short, maxLength: 50, placeholder: "Roles Text Channel")]
+    [RequiredInput(false)]
     public string RolesTextChannelName { get; set; }
 }
