@@ -18,6 +18,7 @@ public class StartupService
     private readonly DataBaseService _dataBaseService;
 
     private int _disconnectCount = 0;
+    private int _disconnectLimit = 1;
 
     /// <summary>
     /// Constructor for the Bot Startup Service
@@ -43,17 +44,34 @@ public class StartupService
 
     private Task BotDisconected(Exception arg)
     {
+        _disconnectCount += 1;
 
-        _logger.LogWarning("Gateway Disconnect: Bot disconected");
-        if (_discord.ConnectionState == ConnectionState.Disconnecting)
+        if (_disconnectCount > _disconnectLimit)
         {
-            _disconnectCount += 1;
+            return Task.CompletedTask;
         }
 
-        if (_discord.ConnectionState == ConnectionState.Disconnected || _disconnectCount > 3)
+        _logger.LogWarning($"Gateway Disconnect: Bot disconecting/disconnected {_disconnectCount} of {_disconnectLimit}");
+        if (_discord.ConnectionState == ConnectionState.Disconnecting || _discord.ConnectionState == ConnectionState.Disconnected)
         {
-            _logger.LogCritical("Gateway Disconnect: Bot disconected - Disconnecting Call limit reached, App exiting.");
-            Environment.Exit(1);
+            if (_disconnectCount == _disconnectLimit)
+            {
+                var closeApplicationTask = Task.Run(async () =>
+                {
+                    _logger.LogCritical($"Gateway Disconnect: Bot disconected - Disconnecting Call limit reached {_disconnectCount} of {_disconnectLimit}, App will exit in 30 seconds.");
+                    Thread.Sleep(30000);
+                    if (_discord.ConnectionState == ConnectionState.Disconnecting || _discord.ConnectionState == ConnectionState.Disconnected)
+                    {
+                        await _discord.LogoutAsync();
+                        Environment.Exit(1);
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"Gateway Disconnect: Gateway status - {_discord.ConnectionState}, not exiting application.");
+                        _disconnectCount = 0;
+                    }
+                });
+            }
         }
 
         return Task.CompletedTask;
