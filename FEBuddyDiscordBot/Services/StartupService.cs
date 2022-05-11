@@ -18,6 +18,7 @@ public class StartupService
     private readonly DataBaseService _dataBaseService;
 
     private int _disconnectCount = 0;
+    private int _disconnectLimit = 5;
 
     /// <summary>
     /// Constructor for the Bot Startup Service
@@ -41,22 +42,21 @@ public class StartupService
         _logger.LogDebug("Loaded: StartupService");
     }
 
-    private Task BotDisconected(Exception arg)
+    private async Task BotDisconected(Exception arg)
     {
 
-        _logger.LogWarning("Gateway Disconnect: Bot disconected");
-        if (_discord.ConnectionState == ConnectionState.Disconnecting)
+        _logger.LogWarning("Gateway Disconnect: Bot disconecting/disconnected");
+        if (_discord.ConnectionState == ConnectionState.Disconnecting || _discord.ConnectionState == ConnectionState.Disconnected)
         {
             _disconnectCount += 1;
-        }
 
-        if (_discord.ConnectionState == ConnectionState.Disconnected || _disconnectCount > 3)
-        {
-            _logger.LogCritical("Gateway Disconnect: Bot disconected - Disconnecting Call limit reached, App exiting.");
-            Environment.Exit(1);
+            if (_disconnectCount >= _disconnectLimit)
+            {
+                _logger.LogCritical($"Gateway Disconnect: Bot disconected - Disconnecting Call limit reached {_disconnectCount} of {_disconnectLimit}, App exiting.");
+                await _discord.LogoutAsync();
+                Environment.Exit(1);
+            }
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task JoinedNewGuild(SocketGuild arg)
