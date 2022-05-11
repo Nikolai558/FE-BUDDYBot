@@ -1,5 +1,6 @@
 ﻿using Discord.Interactions;
 using System.Reflection;
+using Discord.Webhook;
 
 namespace FEBuddyDiscordBot.Services;
 
@@ -62,6 +63,12 @@ public class StartupService
                     Thread.Sleep(30000);
                     if (_discord.ConnectionState == ConnectionState.Disconnecting || _discord.ConnectionState == ConnectionState.Disconnected)
                     {
+                        using (DiscordWebhookClient hook = new DiscordWebhookClient(_config.GetRequiredSection("WebhookURL").Value))
+                        {
+                            var response = await hook.SendMessageAsync("FE-Buddy Bot has been disconnected for 30 seconds or longer. Please check the status of it.");
+                            _logger.LogInformation($"Webhook: Message ID - {response}");
+                        };
+
                         _logger.LogCritical($"Gateway Disconnect: Bot disconected for longer than 30 seconds, closing application.");
                         await _discord.LogoutAsync();
                         Environment.Exit(1);
