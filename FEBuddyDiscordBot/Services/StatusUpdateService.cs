@@ -30,7 +30,7 @@ public class StatusUpdateService
 
     public Task Start()
     {
-        _logger.LogDebug("StatusUpdateService: Creating Thread for Uptime Kuma Status calls.");
+        _logger.LogInformation("StatusUpdateService: Creating Thread for Uptime Kuma Status calls.");
         IsRunning = true;
         _currentServiceThread = new Thread(Run);
         _currentServiceThread.Start();
@@ -51,13 +51,11 @@ public class StatusUpdateService
             try
             {
                 var response = await httpClient.GetAsync(url);
-                _logger.LogDebug("StatusUpdateService: Uptime-Kuma response '" + response.StatusCode + " - " + response.Content.ToString() + "'");
             }
             catch (Exception ex)
             {
                 _logger.LogWarning("StatusUpdateService: " + ex.Message);
             }
-            _logger.LogDebug("StatusUpdateService: Waiting for 60 seconds.");
             Thread.Sleep(60000);
         }
 
