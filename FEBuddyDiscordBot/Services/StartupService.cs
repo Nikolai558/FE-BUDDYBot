@@ -127,6 +127,8 @@ public class StartupService
     /// <returns>None</returns>
     private async Task DiscordReady()
     {
+        await _services.GetRequiredService<StatusUpdateService>().Start();
+
         _disconnectCount = 0;
 
         // Get a list of guilds (discord servers) the bot is currently in.
