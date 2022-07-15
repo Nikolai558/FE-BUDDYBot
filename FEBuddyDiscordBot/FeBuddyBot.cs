@@ -33,7 +33,8 @@ public class FeBuddyBot
         // Specify the Discord Socket Client configurations
         DiscordSocketConfig discordConfig = new()
         {
-            GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates
+            GatewayIntents = GatewayIntents.GuildMembers | GatewayIntents.DirectMessages | GatewayIntents.GuildMessages | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates,
+            AlwaysDownloadUsers = true
         };
 
         // Create our Discord Client using the configurations above.
