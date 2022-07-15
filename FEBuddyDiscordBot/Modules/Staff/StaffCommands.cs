@@ -37,33 +37,31 @@ public class StaffCommands : ModuleBase
     [Command("check-users", RunMode = RunMode.Async), Name("Check-Users"), Summary("Go through all users in the Guild and check their verification status and nickname"), Alias("verify-check")]
     public async Task ServerCount()
     {
-        await Context.Message.Author.SendMessageAsync("This command is a WIP (Work in Progress)");
-
         var roleAssignment = _services.GetRequiredService<RoleAssignmentService>();
         GuildModel guild = await _services.GetRequiredService<IMongoGuildData>().GetGuildAsync(Context.Guild.Id);
-        List<IReadOnlyCollection<IUser>> users = await Context.Channel.GetUsersAsync(CacheMode.AllowDownload).ToListAsync();
         var originalMSG = Context.Message;
+        var users = await Context.Channel.GetUsersAsync().FlattenAsync<IUser>();
 
         await Context.Message.DeleteAsync();
 
         var invalidOpUsers = new StringBuilder();
 
-        foreach (IReadOnlyCollection<IUser> userCollection in users)
+        foreach (var user in users)
         {
-            foreach (IUser user in userCollection)
+            try
             {
-                try
+                _logger.LogDebug($"Command: Checking user {user.Username} in {guild.GuildName} guild.");
+                if (user.IsBot)
                 {
-                    if (user.IsBot)
-                    {
-                        continue;
-                    }
-                    await roleAssignment.GiveRole((SocketGuildUser)user, guild, false);
+                    _logger.LogDebug($"Command: {user.Username} in {guild.GuildName} guild is a bot. Skipping.");
+                    continue;
                 }
-                catch (Exception)
-                {
-                    invalidOpUsers.AppendLine("    " + user.Username);
-                }
+                await roleAssignment.GiveRole((SocketGuildUser)user, guild, false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug($"Command: Exception occured - {ex.Message}");
+                invalidOpUsers.AppendLine("    " + user.Username);
             }
         }
 
