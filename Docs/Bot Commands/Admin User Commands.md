@@ -2,7 +2,7 @@
 All `/admin` commands reply privately. For `events`, `roles` and `channels`, every option is optional: only the options you fill in are changed.
 
 **Permission Requirements**
-* `Administrator`, or the bot owner
+* `Manage Server`, or the bot owner
 
 ## Show Settings
 `/admin settings`
