@@ -24,6 +24,8 @@ The `/admin events` switches still apply. With **Assign staff role** off, the st
 The reply (only visible to you) has a summary and a `.txt` report listing every member with differences. Members who aren't linked are never sent a direct message by this command. Only one check can run at a time.
 
 **Permission Requirements**
-* `Manage Messages` and `Manage Channels`
+* `Manage Roles`, `Manage Messages` and `Manage Channels` (all three)
+
+The bot makes the changes with its own permissions, so Discord's role order isn't checked for the person running the command. The bot only ever changes the Verified and ARTCC Staff roles. To limit the command to specific roles, go to Server Settings → Integrations → the bot → `/staff check-users`.
 
 ---
