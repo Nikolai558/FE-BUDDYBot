@@ -28,4 +28,11 @@ The reply (only visible to you) has a summary and a `.txt` report listing every 
 
 The bot makes the changes with its own permissions, so Discord's role order isn't checked for the person running the command. The bot only ever changes the Verified and ARTCC Staff roles. To limit the command to specific roles, go to Server Settings → Integrations → the bot → `/staff check-users`.
 
+In FE-Buddy it can be used in **#feb-helper**, **#owner-chat** and **#admin-chat** (see [Discord Setup](../Discord%20Setup.md#command-permissions)).
+
+**Log:** each member who was changed gets one line in the bot's log, e.g.
+```
+Roles: someone (123…) VATUSA CID 1234567 ZLC | added: none | removed: ARTCC STAFF | kept: Verified | nickname: unchanged
+```
+
 ---
