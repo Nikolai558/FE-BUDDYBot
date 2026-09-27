@@ -1,49 +1,47 @@
-﻿namespace FEBuddyDiscordBot.Models;
-#pragma warning disable IDE1006
+using System.Text.Json.Serialization;
 
-public class VatusaUserModel
+namespace FEBuddyDiscordBot.Models;
+
+/// <summary>
+/// Response wrapper from GET https://api.vatusa.net/v2/user/{discordId}?d
+/// Only the fields the bot uses are mapped.
+/// </summary>
+public sealed class VatusaUserResponse
 {
+    [JsonPropertyName("data")]
+    public VatusaUser? Data { get; set; }
+}
 
-    public class VatusaUserData
-    {
-        public UserInformation? data { get; set; }
-        public bool? testing { get; set; }
-    }
+public sealed class VatusaUser
+{
+    [JsonPropertyName("cid")]
+    public long? Cid { get; set; }
 
-    public class UserInformation
-    {
-        public int? cid { get; set; }
-        public string? fname { get; set; }
-        public string? lname { get; set; }
-        public string? email { get; set; }
-        public string? facility { get; set; }
-        public int? rating { get; set; }
-        public DateTime? created_at { get; set; }
-        public DateTime? updated_at { get; set; }
-        public bool? flag_needbasic { get; set; }
-        public bool? flag_xferOverride { get; set; }
-        public DateTime? facility_join { get; set; }
-        public bool? flag_homecontroller { get; set; }
-        public DateTime? lastactivity { get; set; }
-        public object? flag_broadcastOptedIn { get; set; }
-        public object? flag_preventStaffAssign { get; set; }
-        public bool? promotion_eligible { get; set; }
-        public object? transfer_eligible { get; set; }
-        public StaffRole[]? roles { get; set; }
-        public string? rating_short { get; set; }
-        public object[]? visiting_facilities { get; set; }
-        public bool? isMentor { get; set; }
-        public bool? isSupIns { get; set; }
-        public DateTime? last_promotion { get; set; }
-    }
+    [JsonPropertyName("fname")]
+    public string? FirstName { get; set; }
 
-    public class StaffRole
-    {
-        public int? id { get; set; }
-        public int? cid { get; set; }
-        public string? facility { get; set; }
-        public string? role { get; set; }
-        public DateTime? created_at { get; set; }
-    }
+    [JsonPropertyName("lname")]
+    public string? LastName { get; set; }
 
+    [JsonPropertyName("facility")]
+    public string? Facility { get; set; }
+
+    [JsonPropertyName("rating_short")]
+    public string? RatingShort { get; set; }
+
+    /// <summary>When true the member asked VATUSA to hide their real name, so the bot uses their CID instead.</summary>
+    [JsonPropertyName("flag_nameprivacy")]
+    public bool? NamePrivacy { get; set; }
+
+    [JsonPropertyName("roles")]
+    public VatusaStaffRole[]? Roles { get; set; }
+}
+
+public sealed class VatusaStaffRole
+{
+    [JsonPropertyName("facility")]
+    public string? Facility { get; set; }
+
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
 }

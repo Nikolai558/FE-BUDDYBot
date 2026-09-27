@@ -1,65 +1,55 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using FEBuddyDiscordBot.Models;
 
 namespace FEBuddyDiscordBot.Services;
-public class StatusUpdateService
+
+/// <summary>
+/// Sends a heartbeat to an Uptime Kuma push monitor while the bot is connected to Discord.
+/// If the bot is disconnected no heartbeat is sent, so Uptime Kuma reports it as down.
+/// </summary>
+public sealed class StatusUpdateService : BackgroundService
 {
-    private readonly IServiceProvider _services;
-    private readonly ILogger _logger;
-    private readonly IConfiguration _config;
+    public const string HttpClientName = "heartbeat";
 
-    public bool IsRunning { get; protected set; } = false;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly DiscordSocketClient _discord;
+    private readonly HeartbeatOptions _options;
+    private readonly ILogger<StatusUpdateService> _logger;
 
-    private Thread _currentServiceThread;
-
-    /// <summary>
-    /// Constructor for the Role Assignment Service
-    /// </summary>
-    /// <param name="services">Dependency Injection Service Provider</param>
-    public StatusUpdateService(IServiceProvider services)
+    public StatusUpdateService(IHttpClientFactory httpClientFactory, DiscordSocketClient discord, IOptions<HeartbeatOptions> options, ILogger<StatusUpdateService> logger)
     {
-        _services = services;
-        _logger = _services.GetRequiredService<ILogger<StatusUpdateService>>();
-        _config = _services.GetRequiredService<IConfiguration>();
-
-        _logger.LogDebug("Loaded: StatusUpdateService");
+        _httpClientFactory = httpClientFactory;
+        _discord = discord;
+        _options = options.Value;
+        _logger = logger;
     }
 
-    public Task Start()
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("StatusUpdateService: Creating Thread for Uptime Kuma Status calls.");
-        IsRunning = true;
-        _currentServiceThread = new Thread(Run);
-        _currentServiceThread.Start();
-
-        return Task.CompletedTask;
-    }
-
-    private async void Run()
-    {
-        _logger.LogDebug("StatusUpdateService: Service for Uptime Kuma Status calls started.");
-
-        string url = _config.GetRequiredSection("UptimeKumaUrl").Value;
-
-        using HttpClient httpClient = new HttpClient();
-        
-        while (IsRunning)
+        if (!_options.Enabled || string.IsNullOrWhiteSpace(_options.Url))
         {
-            try
-            {
-                var response = await httpClient.GetAsync(url);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("StatusUpdateService: " + ex.Message);
-            }
-            Thread.Sleep(60000);
+            _logger.LogInformation("Heartbeat: disabled");
+            return;
         }
 
+        _logger.LogInformation("Heartbeat: sending every {Seconds}s", _options.IntervalSeconds);
+
+        HttpClient http = _httpClientFactory.CreateClient(HttpClientName);
+        using PeriodicTimer timer = new(TimeSpan.FromSeconds(_options.IntervalSeconds));
+
+        do
+        {
+            if (_discord.ConnectionState != ConnectionState.Connected) continue;
+
+            try
+            {
+                using HttpResponseMessage response = await http.GetAsync($"{_options.Url}?status=up&msg=OK&ping={_discord.Latency}", stoppingToken);
+                if (!response.IsSuccessStatusCode) _logger.LogWarning("Heartbeat: Uptime Kuma returned HTTP {StatusCode}", (int)response.StatusCode);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException && !stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogWarning("Heartbeat: {Error}", ex.Message);
+            }
+        }
+        while (await timer.WaitForNextTickAsync(stoppingToken));
     }
-
-
 }
