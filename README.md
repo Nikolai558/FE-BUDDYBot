@@ -1,9 +1,31 @@
 # FE-BUDDYBot
-Discord bot for the FE-Buddy Discord server. It links members to their [VATUSA](https://www.vatusa.net/) accounts: it assigns roles, sets nicknames, and manages the private meeting role.
+Discord bot for the FE-Buddy Discord server. It links members to their [VATUSA](https://www.vatusa.net/) accounts, gives them the right roles, and keeps their nicknames up to date.
 
-## [Bot Commands](https://github.com/Nikolai558/FE-BUDDYBot/tree/releases/Docs)
+## What it does
+* **Verified role** for members whose Discord account is linked on VATUSA.
+* **ARTCC Staff role** for members VATUSA lists as ATM, DATM, TA, EC, FE or WM.
+* **Nicknames** in the form `First Last | ARTCC`. Anything before an existing `|` is kept, and members with VATUSA name privacy get their CID instead of their name.
+* **Automatic updates** when someone joins the server or connects to voice. New members who aren't linked get a direct message explaining how to link their account.
+* **Server-wide checks** for staff: preview, add, remove or fully update everyone's roles and nicknames.
+* **Private meeting role**, optionally given while someone is in a chosen voice channel.
 
-## Development
+## Commands
+| Command | Who | What it does |
+|---|---|---|
+| `/give-role` | Everyone | Get your roles and nickname |
+| `/staff check-users` | Staff | Check every member against VATUSA; report or fix roles and nicknames |
+| `/admin settings` / `events` / `roles` / `channels` | Admins | View and change the bot's settings |
+| `/owner set-status` | Bot owner | Set the bot's status text |
+
+Full details are in the **[documentation](Docs/README.md)**.
+
+## Tech
+* .NET 10 (LTS) worker app using [Discord.Net](https://github.com/discord-net/Discord.Net) 3.20
+* SQLite for the server's settings; no external database
+* VATUSA API v2 for member lookups
+* Docker image published to `ghcr.io/nikolai558/fe-buddybot` by GitHub Actions on every push to `main`
+
+## Quick start (development)
 Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 Development runs against the test server (`appsettings.Development.json`) with the development bot. Store its token once in user-secrets:
@@ -14,17 +36,27 @@ dotnet user-secrets set "Bot:Token" "<development bot token>"
 dotnet run --environment Development
 ```
 
-Run the tests with `dotnet test` from the repository root.
+Run the tests from the repository root with `dotnet test`.
 
-## Configuration
-* `appsettings.json`: non-secret settings. Committed.
-* Secrets (`Bot:Token`, `Bot:DisconnectWebhookUrl`, `Heartbeat:Url`) come from user-secrets in development, or environment variables in production (`Bot__Token`, ...). See [`bot.env.example`](FEBuddyDiscordBot/bot.env.example).
-* Server settings (which events are on, which roles and channels to use) live in a SQLite database in `data/` and are changed in Discord with `/admin`. On first run the database is seeded from the `GuildDefaults` section.
+Never run the production token on your own computer while the server is running the bot: two copies would both react to every event.
 
-## Running with Docker
+## Repository layout
 ```
-cd FEBuddyDiscordBot
-cp bot.env.example bot.env   # fill in the token
-mkdir -p data logs && sudo chown -R 1654:1654 data logs
-docker compose up -d
+FEBuddyDiscordBot/          The bot
+├── DataAccess/             VATUSA API client, SQLite settings store
+├── Models/                 Configuration options and data models
+├── Modules/SlashCommands/  /give-role, /staff, /admin, /owner
+├── Services/               Startup, role assignment, logging, heartbeat, connection watchdog
+├── appsettings.json        Non-secret settings (committed)
+├── bot.env.example         Template for production secrets
+├── Dockerfile
+└── docker-compose.yml      Used on the server
+FEBuddyDiscordBot.Tests/    Unit tests
+Docs/                       Documentation
 ```
+
+## Documentation
+* [Commands and automatic events](Docs/README.md#commands)
+* [Configuration](Docs/Configuration.md): settings, secrets and the settings database
+* [Discord setup](Docs/Discord%20Setup.md): Developer Portal, bot permissions and command permissions
+* [Deployment](Docs/Deployment.md): running, updating and rolling back on the server
