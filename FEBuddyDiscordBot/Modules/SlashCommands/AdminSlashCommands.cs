@@ -4,12 +4,12 @@ using FEBuddyDiscordBot.Models;
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
 
 /// <summary>
-/// Bot configuration for server administrators (or the bot owner).
+/// Bot configuration for members with Manage Server (or the bot owner).
 /// Every option is optional: only the options you fill in are changed.
 /// </summary>
-[Group("admin", "Bot configuration (administrators only)")]
-[DefaultMemberPermissions(GuildPermission.Administrator)]
-[RequireUserPermission(GuildPermission.Administrator, Group = "AdminPermission")]
+[Group("admin", "Bot configuration (requires Manage Server)")]
+[DefaultMemberPermissions(GuildPermission.ManageGuild)]
+[RequireUserPermission(GuildPermission.ManageGuild, Group = "AdminPermission")]
 [RequireOwner(Group = "AdminPermission")]
 public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteractionContext>
 {
