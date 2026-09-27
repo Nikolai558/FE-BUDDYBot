@@ -1,0 +1,9 @@
+bin/
+obj/
+data/
+logs/
+*.env
+.env
+docker-compose*.yml
+Dockerfile
+.dockerignore
