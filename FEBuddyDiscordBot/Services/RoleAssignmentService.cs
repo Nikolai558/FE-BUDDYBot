@@ -12,15 +12,49 @@ public enum RoleAssignmentOutcome
     VatusaUnavailable,
 }
 
+/// <summary>Which kinds of changes <see cref="RoleAssignmentService.ApplyAsync"/> may make.</summary>
+[Flags]
+public enum MemberChanges
+{
+    None = 0,
+    AddRoles = 1,
+    RemoveRoles = 2,
+    Nickname = 4,
+    All = AddRoles | RemoveRoles | Nickname,
+}
+
 /// <summary>
-/// What happened when roles were assigned to a member. <see cref="Problems"/> lists anything the bot could not do.
+/// Read-only comparison of a member against VATUSA: what the bot would add, remove or rename. Nothing has been changed yet.
+/// </summary>
+public sealed record MemberCheck(
+    SocketGuildUser User,
+    VatusaLookupStatus Status,
+    VatusaUser? Vatusa,
+    IReadOnlyList<SocketRole> RolesToAdd,
+    IReadOnlyList<SocketRole> RolesToRemove,
+    IReadOnlyList<SocketRole> RolesKept,
+    string? CurrentNickname,
+    string? NewNickname,
+    bool IsServerOwner,
+    IReadOnlyList<string> Problems)
+{
+    public bool HasDifferences => RolesToAdd.Count > 0 || RolesToRemove.Count > 0 || NewNickname is not null;
+}
+
+/// <summary>
+/// What happened when changes were applied to a member. <see cref="Problems"/> lists anything the bot could not do.
 /// </summary>
 public sealed record RoleAssignmentResult(
     RoleAssignmentOutcome Outcome,
     IReadOnlyList<IRole> Roles,
+    IReadOnlyList<IRole> Added,
+    IReadOnlyList<IRole> Removed,
     string? Nickname,
+    bool NicknameChanged,
     IReadOnlyList<string> Problems)
 {
+    public static RoleAssignmentResult Empty(RoleAssignmentOutcome outcome) => new(outcome, [], [], [], null, false, []);
+
     public Embed ToEmbed()
     {
         EmbedBuilder embed = Outcome switch
@@ -148,102 +182,182 @@ public sealed class RoleAssignmentService
     }
 
     /// <summary>
-    /// Look the member up on VATUSA and give them the verified role, the staff role (if applicable), and their nickname.
+    /// Used by /give-role and the join/voice events: add any missing roles and update the nickname. Never removes roles.
     /// </summary>
     /// <param name="user">Member to update.</param>
     /// <param name="notifyIfNotLinked">Send the member a DM explaining how to link their account if it isn't linked.</param>
     public async Task<RoleAssignmentResult> AssignRolesAsync(SocketGuildUser user, bool notifyIfNotLinked)
     {
+        MemberCheck check = await CheckAsync(user);
+
+        if (check.Status == VatusaLookupStatus.Unavailable)
+        {
+            _logger.LogInformation("Roles: {User} ({UserId}) skipped; VATUSA unavailable", user.Username, user.Id);
+            return RoleAssignmentResult.Empty(RoleAssignmentOutcome.VatusaUnavailable);
+        }
+
+        if (check.Status == VatusaLookupStatus.NotLinked)
+        {
+            _logger.LogInformation("Roles: {User} ({UserId}) is not linked on VATUSA", user.Username, user.Id);
+            if (notifyIfNotLinked) await SendNotLinkedMessageAsync(user, _settings.Current);
+            return RoleAssignmentResult.Empty(RoleAssignmentOutcome.NotLinked);
+        }
+
+        return await ApplyAsync(check, MemberChanges.AddRoles | MemberChanges.Nickname, logUnchanged: true);
+    }
+
+    /// <summary>
+    /// Compare a member with VATUSA and work out which roles they should gain or lose and what their nickname should be.
+    /// Makes no changes. Respects the /admin event switches (staff role, nicknames).
+    /// </summary>
+    public async Task<MemberCheck> CheckAsync(SocketGuildUser user)
+    {
         GuildSettings settings = _settings.Current;
         VatusaLookup lookup = await _vatusa.GetUserByDiscordIdAsync(user.Id);
+        bool isOwner = user.Id == user.Guild.OwnerId;
 
         if (lookup.Status == VatusaLookupStatus.Unavailable)
         {
-            return new(RoleAssignmentOutcome.VatusaUnavailable, [], null, []);
+            return new(user, lookup.Status, null, [], [], [], user.Nickname, null, isOwner, []);
         }
 
-        if (lookup.Status == VatusaLookupStatus.NotLinked || lookup.User is null)
-        {
-            _logger.LogInformation("No Role: {User} ({UserId}) is not linked on VATUSA", user.Username, user.Id);
-            if (notifyIfNotLinked) await SendNotLinkedMessageAsync(user, settings);
-            return new(RoleAssignmentOutcome.NotLinked, [], null, []);
-        }
+        (bool shouldBeVerified, bool shouldBeStaff) = Qualifications(lookup);
 
-        VatusaUser vatusaUser = lookup.User;
-        List<IRole> roles = [];
+        List<SocketRole> toAdd = [], toRemove = [], kept = [];
         List<string> problems = [];
 
-        await GiveRoleAsync(user, settings.VerifiedRoleId, "Verified", roles, problems);
-
-        if (settings.AssignStaffRole && IsFacilityStaff(vatusaUser))
+        void Compare(ulong? roleId, string label, bool shouldHave)
         {
-            await GiveRoleAsync(user, settings.StaffRoleId, "Staff", roles, problems);
+            SocketRole? role = roleId is ulong id ? user.Guild.GetRole(id) : null;
+            if (role is null)
+            {
+                if (shouldHave)
+                {
+                    WarnOnce($"role-missing-{label}", $"The {label} role is not set or no longer exists. Use /admin roles to choose it.");
+                    problems.Add($"The {label} role isn't configured. Please let an admin know.");
+                }
+                return;
+            }
+
+            bool has = user.Roles.Any(r => r.Id == role.Id);
+            if (shouldHave && !has) toAdd.Add(role);
+            else if (!shouldHave && has) toRemove.Add(role);
+            else if (has) kept.Add(role);
         }
 
-        string? nickname = null;
-        if (settings.ChangeNicknames)
+        Compare(settings.VerifiedRoleId, "Verified", shouldBeVerified);
+        if (settings.AssignStaffRole) Compare(settings.StaffRoleId, "Staff", shouldBeStaff);
+
+        string? newNickname = null;
+        if (lookup.User is not null && settings.ChangeNicknames && !isOwner)
         {
-            nickname = await ChangeNicknameAsync(user, vatusaUser, problems);
+            string nickname = BuildNickname(user.Nickname, lookup.User);
+            if (nickname != user.Nickname) newNickname = nickname;
         }
 
-        return new(RoleAssignmentOutcome.Assigned, roles, nickname, problems);
+        return new(user, lookup.Status, lookup.User, toAdd, toRemove, kept, user.Nickname, newNickname, isOwner, problems);
     }
 
-    private async Task GiveRoleAsync(SocketGuildUser user, ulong? roleId, string label, List<IRole> assigned, List<string> problems)
+    /// <summary>
+    /// Make the changes from a <see cref="CheckAsync"/> result, limited to the kinds of change allowed by <paramref name="changes"/>.
+    /// </summary>
+    /// <param name="logUnchanged">Log a summary line even if nothing changed (bulk checks only log members that changed).</param>
+    public async Task<RoleAssignmentResult> ApplyAsync(MemberCheck check, MemberChanges changes, bool logUnchanged)
     {
-        SocketRole? role = roleId is ulong id ? user.Guild.GetRole(id) : null;
-        if (role is null)
+        SocketGuildUser user = check.User;
+
+        if (check.Status == VatusaLookupStatus.Unavailable)
         {
-            WarnOnce($"role-missing-{label}", $"The {label} role is not set or no longer exists. Use /admin roles to choose it.");
-            problems.Add($"The {label} role isn't configured. Please let an admin know.");
-            return;
+            return RoleAssignmentResult.Empty(RoleAssignmentOutcome.VatusaUnavailable);
         }
 
-        if (user.Roles.Any(r => r.Id == role.Id))
+        List<string> problems = [.. check.Problems];
+        List<IRole> added = [], removed = [];
+
+        if (changes.HasFlag(MemberChanges.AddRoles))
         {
-            assigned.Add(role);
-            return;
+            foreach (SocketRole role in check.RolesToAdd)
+            {
+                if (await TryChangeRoleAsync(user, role, add: true, problems)) added.Add(role);
+            }
         }
 
+        if (changes.HasFlag(MemberChanges.RemoveRoles))
+        {
+            foreach (SocketRole role in check.RolesToRemove)
+            {
+                if (await TryChangeRoleAsync(user, role, add: false, problems)) removed.Add(role);
+            }
+        }
+
+        string? nickname = check.NewNickname is null && !check.IsServerOwner ? check.CurrentNickname : null;
+        bool nicknameChanged = false;
+        if (changes.HasFlag(MemberChanges.Nickname) && check.NewNickname is not null)
+        {
+            try
+            {
+                await user.ModifyAsync(u => u.Nickname = check.NewNickname);
+                nickname = check.NewNickname;
+                nicknameChanged = true;
+            }
+            catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
+            {
+                _logger.LogWarning("Missing Permissions: could not change nickname for {User} ({UserId})", user.Username, user.Id);
+                problems.Add("I couldn't change your nickname.");
+            }
+        }
+
+        RoleAssignmentOutcome outcome = check.Status == VatusaLookupStatus.NotLinked ? RoleAssignmentOutcome.NotLinked : RoleAssignmentOutcome.Assigned;
+        IReadOnlyList<IRole> rolesNow = [.. check.RolesKept, .. added, .. check.RolesToRemove.Except(removed)];
+        RoleAssignmentResult result = new(outcome, rolesNow, added, removed, nickname, nicknameChanged, problems);
+
+        LogSummary(check, result, logUnchanged);
+        return result;
+    }
+
+    private async Task<bool> TryChangeRoleAsync(SocketGuildUser user, SocketRole role, bool add, List<string> problems)
+    {
         try
         {
-            await user.AddRoleAsync(role);
-            assigned.Add(role);
-            _logger.LogInformation("Give Role: {User} ({UserId}) -> {Role}", user.Username, user.Id, role.Name);
+            if (add) await user.AddRoleAsync(role);
+            else await user.RemoveRoleAsync(role);
+            return true;
         }
         catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
         {
-            _logger.LogWarning("Missing Permissions: could not give {Role} to {User} ({UserId}). The bot's role must be above {Role}.", role.Name, user.Username, user.Id, role.Name);
-            problems.Add($"I couldn't give you {role.Mention}. An admin needs to move my role above it.");
+            _logger.LogWarning("Missing Permissions: could not {Action} {Role} for {User} ({UserId}). The bot's role must be above {Role}.",
+                add ? "give" : "remove", role.Name, user.Username, user.Id, role.Name);
+            problems.Add(add ? $"I couldn't give you {role.Mention}. An admin needs to move my role above it." : $"I couldn't remove {role.Mention}.");
+            return false;
         }
     }
 
-    private async Task<string?> ChangeNicknameAsync(SocketGuildUser user, VatusaUser vatusaUser, List<string> problems)
+    // One line per member, e.g.:
+    // Roles: nikolai558 (353684697651478528) VATUSA CID 1234567 ZLC | added: Verified | removed: none | kept: ARTCC STAFF | nickname: unchanged (server owner)
+    private void LogSummary(MemberCheck check, RoleAssignmentResult result, bool logUnchanged)
     {
-        string nickname = BuildNickname(user.Nickname, vatusaUser);
+        bool changed = result.Added.Count > 0 || result.Removed.Count > 0 || result.NicknameChanged;
+        if (!changed && !logUnchanged && result.Problems.Count == 0) return;
 
-        if (nickname == user.Nickname) return nickname;
+        static string Names(IEnumerable<IRole> roles) => roles.Any() ? string.Join(", ", roles.Select(r => r.Name)) : "none";
 
-        if (user.Id == user.Guild.OwnerId)
-        {
-            // Discord never lets bots rename the server owner.
-            _logger.LogDebug("Nickname: skipping server owner {User}", user.Username);
-            return null;
-        }
+        string vatusa = check.Status == VatusaLookupStatus.NotLinked ? "not linked" : $"CID {check.Vatusa?.Cid} {check.Vatusa?.Facility}";
+        string nickname = result.NicknameChanged ? $"'{check.CurrentNickname}' -> '{result.Nickname}'"
+            : check.IsServerOwner ? "unchanged (server owner)"
+            : check.NewNickname is not null ? $"not changed (would be '{check.NewNickname}')"
+            : "unchanged";
 
-        string? oldNickname = user.Nickname;
-        try
-        {
-            await user.ModifyAsync(u => u.Nickname = nickname);
-            _logger.LogInformation("Nickname: {User} ({UserId}) from '{Old}' to '{New}'", user.Username, user.Id, oldNickname, nickname);
-            return nickname;
-        }
-        catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
-        {
-            _logger.LogWarning("Missing Permissions: could not change nickname for {User} ({UserId})", user.Username, user.Id);
-            problems.Add("I couldn't change your nickname.");
-            return null;
-        }
+        _logger.LogInformation("Roles: {User} ({UserId}) VATUSA {Vatusa} | added: {Added} | removed: {Removed} | kept: {Kept} | nickname: {Nickname}{Problems}",
+            check.User.Username, check.User.Id, vatusa, Names(result.Added), Names(result.Removed), Names(check.RolesKept), nickname,
+            result.Problems.Count > 0 ? " | problems: " + string.Join("; ", result.Problems) : "");
+    }
+
+    /// <summary>Which roles a member qualifies for, given their VATUSA lookup.</summary>
+    internal static (bool Verified, bool Staff) Qualifications(VatusaLookup lookup)
+    {
+        bool linked = lookup.Status == VatusaLookupStatus.Found && lookup.User is not null;
+        bool staff = linked && lookup.User!.Roles?.Any(r => r.Role is not null && StaffPositions.Contains(r.Role)) == true;
+        return (linked, staff);
     }
 
     /// <summary>
@@ -275,9 +389,6 @@ public sealed class RoleAssignmentService
 
         return name + suffix;
     }
-
-    private static bool IsFacilityStaff(VatusaUser vatusaUser) =>
-        vatusaUser.Roles?.Any(r => r.Role is not null && StaffPositions.Contains(r.Role)) == true;
 
     private async Task SendNotLinkedMessageAsync(SocketGuildUser user, GuildSettings settings)
     {
