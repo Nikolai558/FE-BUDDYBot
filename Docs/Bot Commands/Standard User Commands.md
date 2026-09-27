@@ -1,22 +1,15 @@
 # Standard Discord User Commands
-## Give Roles
-`Give Discord Server Roles Depending on VATUSA Status.`
+## Give Role
+`/give-role`
 
-This command checks the users status on the [VATUSA](https://www.vatusa.net/) site. If the user has an account and their discord is linked to that account, one of the following roles is assigned based on what is returned from the VATUSA site.
-* "ARTCC STAFF"
-* "VERIFIED"
+Checks your account on the [VATUSA](https://www.vatusa.net/) website. If your Discord account is linked there, the bot gives you:
+* The **Verified** role
+* The **ARTCC Staff** role, if you hold an ARTCC staff position (ATM, DATM, TA, EC, FE, WM)
 
-This command will also change the users **nickname** to what is returned from the VATUSA site in the following format:
+It also sets your **nickname** to `{First Name} {Last Name} | {ARTCC}`. If your nickname already contains a `|`, only the part after the `|` is changed. If you've turned on name privacy on VATUSA, your CID is used instead of your name.
 
-`{First Name} {Last Name} | {ARTCC}`
+If your account isn't linked, the bot tells you how to link it at https://vatusa.net/my/profile.
 
-If the user does not have a VATUSA account or their discord is not linked to that account, the bot will send a private message with instructions on how to link their discord account.
-
-**Command Aliases:**
-* `{prefix}` `gr`
-* `{prefix}` `give-roles`
-* `{prefix}` `give-role`
-* `{prefix}` `assign-roles`
-* `{prefix}` `assign-role`
+The reply is only visible to you.
 
 ---

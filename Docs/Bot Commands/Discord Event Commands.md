@@ -1,22 +1,13 @@
 # Discord Event Commands
-## User Joined Guild Event
-`When a user joins the guild (discord server), this event is triggered.`
-The bot will check a users status on the [VATUSA](https://www.vatusa.net/) site. If the user has an account and their discord is linked to that account, one of the following roles is assigned based on what is returned from the VATUSA site.
-* "ARTCC STAFF"
-* "VERIFIED"
+These happen automatically. Each one can be turned on or off with `/admin events`.
 
-This command will also change the users **nickname** to what is returned from the VATUSA site in the following format:
+## User Joined Server
+When someone joins the server, the bot does the same thing as [`/give-role`](Standard%20User%20Commands.md). If their Discord account isn't linked on VATUSA, the bot sends them a direct message explaining how to link it.
 
-`{First Name} {Last Name} | {ARTCC}`
+## User Connected to Voice
+When someone connects to any voice channel, the bot does the same thing as `/give-role`, without sending a direct message. Moving between voice channels, muting, or deafening does not trigger it.
 
-If the user does not have a VATUSA account or their discord is not linked to that account, the bot will send a private message with instructions on how to link their discord account.
-
----
-
-## User Joined "Private Meeting" Voice Channel
-`When a user connects to the "Private Meeting" voice channel in the guild (discord server), this event is triggered.`
-
-The bot will give the following role to that user. When the user disconnects from this specified channel the role is removed.
-* "voice-meeting-txt"
+## Private Meeting Voice Channel
+While someone is in the private meeting voice channel, they have the private meeting role. It's removed when they leave. Set the channel and role with `/admin channels` and `/admin roles`.
 
 ---
