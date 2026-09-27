@@ -6,7 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>7d53816e-d5a7-4120-8b6d-8976fba7a785</UserSecretsId>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Do not enable InvariantGlobalization: Discord.Net creates CultureInfo objects from each server's
+         locale (e.g. "en-US") and fails to load the server's roles and channels without culture data. -->
   </PropertyGroup>
 
   <ItemGroup>
