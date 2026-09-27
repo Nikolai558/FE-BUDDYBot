@@ -23,8 +23,8 @@ public enum CheckUsersMode
 /// Commands for server staff.
 /// </summary>
 [Group("staff", "Server staff commands")]
-[DefaultMemberPermissions(GuildPermission.ManageMessages | GuildPermission.ManageChannels)]
-[RequireUserPermission(GuildPermission.ManageMessages | GuildPermission.ManageChannels)]
+[DefaultMemberPermissions(GuildPermission.ManageRoles)]
+[RequireUserPermission(GuildPermission.ManageRoles)]
 public sealed class StaffSlashCommands : InteractionModuleBase<SocketInteractionContext>
 {
     // Only one member check may run at a time.

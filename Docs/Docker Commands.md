@@ -16,6 +16,14 @@ Run these from `/home/febuddybot/bot`. On older servers, use `docker-compose` in
     Update to the newest image:
         docker compose pull && docker compose up -d
 
+    Update on the current Linode (old docker-compose 1.29 on Docker Engine 25+):
+        sudo docker-compose -p febuddybot pull
+        sudo docker-compose -p febuddybot down
+        sudo docker-compose -p febuddybot up -d
+        Always run "down" before "up -d": docker-compose 1.29 crashes with
+        KeyError: 'ContainerConfig' when it tries to recreate a running container.
+        Always pass "-p febuddybot" so it manages the existing container.
+
     Roll back to an older build:
         edit docker-compose.yml: change ":latest" to ":sha-xxxxxxx", then
         docker compose up -d
