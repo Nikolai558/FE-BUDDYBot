@@ -24,7 +24,10 @@ builder.Services.Configure<GitHubOptions>(builder.Configuration.GetSection(GitHu
 builder.Services.AddSingleton(new DiscordSocketConfig
 {
     // GuildMembers is a privileged intent: it must also be enabled in the Discord Developer Portal.
-    GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates,
+    // GuildMessages: edits and deletes of replies in issue posts. MessageContent (privileged, opt-in with
+    // Bot:MessageContentIntent) is needed to copy every reply's text to GitHub.
+    GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates | GatewayIntents.GuildMessages
+        | (builder.Configuration.GetValue<bool>($"{BotOptions.SectionName}:{nameof(BotOptions.MessageContentIntent)}") ? GatewayIntents.MessageContent : GatewayIntents.None),
     AlwaysDownloadUsers = true,
     LogLevel = LogSeverity.Info,
 });
@@ -44,12 +47,18 @@ builder.Services.AddHttpClient(StatusUpdateService.HttpClientName, http => http.
 builder.Services.AddHttpClient(GitHubApi.HttpClientName, http =>
 {
     http.BaseAddress = new Uri("https://api.github.com/");
-    http.Timeout = TimeSpan.FromSeconds(20);
+    http.Timeout = TimeSpan.FromSeconds(60);
     http.DefaultRequestHeaders.UserAgent.ParseAdd("FE-BUDDYBot (+https://github.com/Nikolai558/FE-BUDDYBot)");
     http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
     http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
 });
 builder.Services.AddHttpClient(IssueSubmissionService.FilesHttpClientName, http => http.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddHttpClient(GitHubDeviceFlow.HttpClientName, http =>
+{
+    http.BaseAddress = new Uri("https://github.com/");
+    http.Timeout = TimeSpan.FromSeconds(20);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("FE-BUDDYBot (+https://github.com/Nikolai558/FE-BUDDYBot)");
+});
 builder.Services.AddHttpClient(IssueForumService.DiscordApiHttpClientName, http =>
 {
     http.BaseAddress = new Uri("https://discord.com/api/v10/");
@@ -69,9 +78,11 @@ builder.Services.AddSingleton<RoleAssignmentService>();
 builder.Services.AddSingleton<IssueStore>();
 builder.Services.AddSingleton<GitHubAppAuth>();
 builder.Services.AddSingleton<GitHubApi>();
+builder.Services.AddSingleton<GitHubDeviceFlow>();
 builder.Services.AddSingleton<IssueForumService>();
 builder.Services.AddSingleton<IssueSubmissionService>();
 builder.Services.AddSingleton<IssueInteractionHandler>();
+builder.Services.AddSingleton<IssueReplyService>();
 
 // Background services, started in this order
 builder.Services.AddHostedService<StartupService>();

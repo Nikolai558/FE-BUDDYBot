@@ -11,6 +11,9 @@ public sealed class GitHubOptions
     /// <summary>The GitHub App's "App ID" (from the app's settings page).</summary>
     public long AppId { get; set; }
 
+    /// <summary>The GitHub App's "Client ID" (starts with "Iv"). Only needed for /link-github; not a secret.</summary>
+    public string? ClientId { get; set; }
+
     /// <summary>
     /// Path to the app's private key (.pem). Relative paths are resolved from the app's content root.
     /// The key itself is a secret; keep the file readable only by the bot.

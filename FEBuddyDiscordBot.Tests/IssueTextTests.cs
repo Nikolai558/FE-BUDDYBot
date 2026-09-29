@@ -38,6 +38,17 @@ public sealed class IssueTextTests
     }
 
     [Fact]
+    public void Body_hides_a_marker_that_discord_never_shows()
+    {
+        IssueDraft draft = BugDraft();
+        string body = IssueText.BuildBody(draft, "https://discord.com/channels/1/2");
+
+        Assert.EndsWith($"</sub>\n<!-- fe-buddy-discord:{draft.SubmissionKey} -->\n", body);
+        Assert.DoesNotContain("fe-buddy-discord", IssueText.ForDiscord(body));
+        Assert.DoesNotContain("Submitted from", IssueText.ForDiscord(body));
+    }
+
+    [Fact]
     public void Footer_credits_the_reporter_and_links_the_post()
     {
         IssueDraft draft = BugDraft();
@@ -46,6 +57,10 @@ public sealed class IssueTextTests
 
         draft.Credit = CreditStyle.DiscordId;
         Assert.Contains("by Discord user ID `123456789012345678`.", IssueText.BuildBody(draft, null));
+
+        draft.Credit = CreditStyle.GitHub;
+        draft.GitHubLogin = "Nikolai558";
+        Assert.Contains("by @Nikolai558 (Discord user `some_user`).", IssueText.BuildBody(draft, null));
     }
 
     [Fact]
@@ -77,10 +92,32 @@ public sealed class IssueTextTests
         Assert.Contains("Too long to include here", body);
     }
 
+    [Fact]
+    public void Pastes_as_many_files_as_fit()
+    {
+        IssueDraft draft = BugDraft();
+        string half = new('x', IssueText.MaxBodyLength / 2 - 1000);
+        draft.Attachments =
+        [
+            new("one.log", "text/plain", 1, "u", half),
+            new("two.log", "text/plain", 1, "u", half),
+            new("three.log", "text/plain", 1, "u", half),
+        ];
+
+        string body = IssueText.BuildBody(draft, null);
+
+        Assert.True(body.Length <= IssueText.MaxBodyLength);
+        Assert.Equal(2, body.Split(half).Length - 1);
+        Assert.Contains("Contents of <code>three.log</code></summary>\n\nToo long to include here", body);
+    }
+
     [Theory]
     [InlineData("ping @octocat and @org/team", "ping @​octocat and @​org/team")]
     [InlineData("mail me at nik@example.com", "mail me at nik@example.com")]
     [InlineData("`@code` stays", "`@code` stays")]
+    [InlineData("```\nlog @startup\n```", "```\nlog @startup\n```")]
+    [InlineData("see https://example.com/@user", "see https://example.com/@user")]
+    [InlineData("a.@user cc/@user @@user `x`@user", "a.@​user cc/@​user @@​user `x`@​user")]
     public void Github_mentions_are_escaped(string text, string expected)
     {
         Assert.Equal(expected, IssueText.EscapeMentions(text));

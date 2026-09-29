@@ -7,6 +7,9 @@ public enum CreditStyle
 {
     DiscordName,
     DiscordId,
+
+    /// <summary>Their GitHub account, linked with /link-github. GitHub notifies them and subscribes them to the issue.</summary>
+    GitHub,
 }
 
 /// <summary>
@@ -30,7 +33,13 @@ public sealed class IssueDraft
 
     public List<DraftAttachment> Attachments { get; set; } = [];
     public CreditStyle Credit { get; set; } = CreditStyle.DiscordName;
+
+    /// <summary>The reporter's linked GitHub account, if any.</summary>
+    public string? GitHubLogin { get; set; }
     public DateTimeOffset StartedUtc { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>Hidden in the issue body, so the issue can be found if GitHub creates it but its answer never arrives.</summary>
+    public string SubmissionKey { get; set; } = Guid.NewGuid().ToString("N");
 
     [JsonIgnore]
     public IssueTemplate Template => IssueTemplate.For(Kind);

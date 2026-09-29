@@ -7,7 +7,7 @@ What the bot needs in the Discord Developer Portal and in the server. There are 
 | Setting | Value | Why |
 |---|---|---|
 | **Server Members Intent** | **On** | Required. The bot needs member join events and the member list. |
-| **Message Content Intent** | Off | Not used. The bot only uses slash commands. |
+| **Message Content Intent** | On, if issue replies are copied to GitHub | Lets the bot read replies in issue posts. Turn it on here **before** setting `Bot:MessageContentIntent` to `true`, or the bot can't connect. Leave it off otherwise. |
 | **Presence Intent** | Off | Not used. |
 
 **Token:** click **Reset Token** to get a new one. Discord only shows a token once. The production token goes in `bot.env` on the server and the development token in user-secrets (see [Configuration](Configuration.md#secrets)). Resetting a token disconnects anything still using the old one.
@@ -105,3 +105,13 @@ In #admin-chat:
 
 ### 5. Allow /report
 The report buttons work anywhere they're posted. The `/report` command follows the command permissions: under **Server Settings → Integrations → the bot → /report**, allow **#submit-an-issue**. The bot itself checks for the **Verified** role.
+
+### 6. Replies to GitHub
+By default, every reply in an issue post is copied to the GitHub issue as a comment. Edits and deletes follow it. This needs the **Message Content Intent** turned on in the Developer Portal and `Bot:MessageContentIntent` set to `true` (see [Configuration](Configuration.md#bot)).
+
+To copy only chosen messages instead, use `/admin issues replies:Only "Send to GitHub"`. Members then right-click their message → **Apps → Send to GitHub**. Staff (approvers and Manage Server) can send anyone's message.
+
+The **Send to GitHub** action follows the command permissions like the slash commands. Under **Server Settings → Integrations → the bot → Send to GitHub**, allow the issue forum.
+
+### 7. Linking GitHub accounts
+`/link-github` lets members link their GitHub account, so issues and replies they send are credited to it. It needs the GitHub App's **Client ID** in `GitHub:ClientId` and **Device Flow** turned on in the app ([GitHub App Setup](GitHub%20App%20Setup.md)). Allow `/link-github` and `/unlink-github` wherever members should use them, e.g. **#submit-an-issue**.

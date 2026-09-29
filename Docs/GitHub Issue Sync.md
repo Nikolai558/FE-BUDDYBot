@@ -1,6 +1,6 @@
 # GitHub Issue Sync (design)
 
-Status: Stage 1 built (submitting, forum posts for new and open issues). Stages 2–4 not built yet; see [Stages](#stages).
+Status: Stages 1–3 built (submitting; GitHub ↔ Discord sync; /link-github). Stage 4 (webhooks) not built; see [Stages](#stages).
 
 ## Summary
 
@@ -63,10 +63,12 @@ When more than 5 apply, keep in order: type → closed/status → priority → v
 **GitHub → Discord** (poll every ~2 min using `since` + ETags; later webhooks)
 - New issue → new forum post (pull requests ignored).
 - Title/body edit → update the post title / starter message.
-- New comment → posted in the thread via webhook with the GitHub user's name + avatar.
+- New comment → posted in the thread by the bot, as an embed with the GitHub user's name + avatar linking to the comment. Edits update it. (An embed instead of a webhook: no extra permission or stored webhook token.)
 - Labels → tags.
 - Closed → final message with the close reason, closed tag, **lock + archive**. Reopened → unarchive + unlock.
 - First run: mirror **currently open issues only**. Closed issues are not backfilled.
+- Each check asks for issues and comments changed since the last one (`since`), with a minute's overlap; the bot remembers what each post shows and which comments it copied, so repeats change nothing. The first check starts from when the oldest post was made, so old history isn't replayed.
+- A post deleted in Discord is forgotten and made again while its issue is open.
 
 **Discord → GitHub**
 - Default: **every message** in a post becomes a GitHub comment ("**name** on Discord: …" + link). Edits update the comment; deletes delete it.
@@ -98,6 +100,6 @@ When more than 5 apply, keep in order: type → closed/status → priority → v
 ## Stages
 
 - [x] **Stage 1 — Submit:** GitHub App setup, GitHub client, forum + tags, submit panel + flows, duplicate check, rate limit + approval queue, create issue + post, backfill open issues, posts for issues opened on GitHub (polling).
-- [ ] **Stage 2 — GitHub → Discord:** comments, edits, labels → tags, close/reopen + lock/archive.
-- [ ] **Stage 3 — Discord → GitHub:** message mirroring (+ edits/deletes), attachment notes + log inlining, mode toggle + "Send to GitHub" action, `/link-github` (device flow) + GitHub credit option, Message Content intent on.
+- [x] **Stage 2 — GitHub → Discord:** comments (and their edits), title/body edits, labels → tags, close/reopen + lock/archive, deleted posts re-created.
+- [x] **Stage 3 — Discord → GitHub:** message mirroring (+ edits/deletes), attachment notes + log inlining, mode toggle + "Send to GitHub" action, `/link-github` (device flow) + GitHub credit option, Message Content intent (opt-in with `Bot:MessageContentIntent`). Also: paste as many log files as fit.
 - [ ] **Stage 4 — Webhooks:** `bot.febuddy.com` via Cloudflare tunnel, signature check; polling drops to an hourly safety net.

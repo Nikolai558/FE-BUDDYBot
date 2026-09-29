@@ -38,7 +38,7 @@ Example: `/admin roles verified:@Verified staff:@ARTCC STAFF`
 Roles and channels are saved by ID, so renaming them later doesn't break anything.
 
 ## Issues
-`/admin issues [forum] [submit-channel] [approval-channel] [approver-role] [per-hour]`
+`/admin issues [forum] [submit-channel] [approval-channel] [approver-role] [per-hour] [replies]`
 
 Sets up [issue reporting](../GitHub%20Issue%20Sync.md). Only the options you fill in are changed.
 * `forum`: the forum channel with one post per GitHub issue. When you set it, the bot adds the forum's tags and, within two minutes, a post for every open issue.
@@ -46,6 +46,7 @@ Sets up [issue reporting](../GitHub%20Issue%20Sync.md). Only the options you fil
 * `approval-channel`: private channel where a member's extra submissions wait for approval
 * `approver-role`: pinged for approvals. Members with this role, or with Manage Server, can approve and deny.
 * `per-hour`: how many issues a member may submit per hour before the rest need approval (default 1)
+* `replies`: **Every reply** (default) copies every reply in an issue post to GitHub; **Only "Send to GitHub"** copies only messages sent with that message action. Every reply needs the Message Content intent (see [Discord Setup](../Discord%20Setup.md#6-replies-to-github)).
 
 The reply lists anything still missing, including permissions the bot needs in those channels. Channel setup: [Discord Setup](../Discord%20Setup.md#issue-reporting).
 

@@ -19,12 +19,14 @@ public sealed class IssueInteractionHandler
 
     private readonly IssueSubmissionService _submissions;
     private readonly IssueStore _store;
+    private readonly GitHubDeviceFlow _deviceFlow;
     private readonly ILogger<IssueInteractionHandler> _logger;
 
-    public IssueInteractionHandler(IssueSubmissionService submissions, IssueStore store, ILogger<IssueInteractionHandler> logger)
+    public IssueInteractionHandler(IssueSubmissionService submissions, IssueStore store, GitHubDeviceFlow deviceFlow, ILogger<IssueInteractionHandler> logger)
     {
         _submissions = submissions;
         _store = store;
+        _deviceFlow = deviceFlow;
         _logger = logger;
     }
 
@@ -171,9 +173,13 @@ public sealed class IssueInteractionHandler
             Title = Answer(modal, "title").Trim(),
         };
         ReadAnswers(modal, template.Page(1), draft);
-        _submissions.SaveDraft(draft);
 
         await modal.DeferAsync(ephemeral: true);
+
+        // Members who linked GitHub are credited by their GitHub account unless they choose otherwise.
+        draft.GitHubLogin = await _store.GetGitHubLoginAsync(modal.User.Id);
+        if (draft.GitHubLogin is not null) draft.Credit = CreditStyle.GitHub;
+        _submissions.SaveDraft(draft);
         IReadOnlyList<GitHubIssue> similar = await _submissions.FindDuplicatesAsync(draft.Title);
 
         string text = $"### {template.Emoji} {template.Name}: {draft.Title}\n";
@@ -192,12 +198,20 @@ public sealed class IssueInteractionHandler
         }
 
         text += "\nChoose how you're named on the public GitHub issue, then press **Continue**.";
+        if (draft.GitHubLogin is null && _deviceFlow.IsConfigured) text += " Have a GitHub account? Run `/link-github` to be credited by it next time.";
+
+        SelectMenuBuilder credit = new SelectMenuBuilder().WithCustomId($"{Prefix}credit");
+        if (draft.GitHubLogin is string login)
+        {
+            credit.AddOption($"My GitHub account (@{login})", nameof(CreditStyle.GitHub), "GitHub notifies you about the issue", isDefault: true);
+        }
+
+        credit
+            .AddOption($"My Discord username ({modal.User.Username})", nameof(CreditStyle.DiscordName), isDefault: draft.GitHubLogin is null)
+            .AddOption("My Discord user ID", nameof(CreditStyle.DiscordId), "A number instead of your name");
 
         MessageComponent components = new ComponentBuilder()
-            .WithSelectMenu(new SelectMenuBuilder()
-                .WithCustomId($"{Prefix}credit")
-                .AddOption($"My Discord username ({modal.User.Username})", nameof(CreditStyle.DiscordName), isDefault: true)
-                .AddOption("My Discord user ID", nameof(CreditStyle.DiscordId), "A number instead of your name"))
+            .WithSelectMenu(credit)
             .WithButton("Continue", $"{Prefix}continue", ButtonStyle.Primary, row: 1)
             .WithButton("Cancel", $"{Prefix}cancel", ButtonStyle.Secondary, row: 1)
             .Build();
