@@ -37,4 +37,28 @@ Example: `/admin roles verified:@Verified staff:@ARTCC STAFF`
 
 Roles and channels are saved by ID, so renaming them later doesn't break anything.
 
+## Issues
+`/admin issues [forum] [submit-channel] [approval-channel] [approver-role] [per-hour]`
+
+Sets up [issue reporting](../GitHub%20Issue%20Sync.md). Only the options you fill in are changed.
+* `forum`: the forum channel with one post per GitHub issue. When you set it, the bot adds the forum's tags and, within two minutes, a post for every open issue.
+* `submit-channel`: where `/admin issue-panel` posts the report buttons
+* `approval-channel`: private channel where a member's extra submissions wait for approval
+* `approver-role`: pinged for approvals. Members with this role, or with Manage Server, can approve and deny.
+* `per-hour`: how many issues a member may submit per hour before the rest need approval (default 1)
+
+The reply lists anything still missing, including permissions the bot needs in those channels. Channel setup: [Discord Setup](../Discord%20Setup.md#issue-reporting).
+
+Example: `/admin issues forum:#fe-buddy-issues submit-channel:#submit-an-issue approval-channel:#admin-chat approver-role:@Admin`
+
+## Dev-Task Roles
+`/admin dev-task-roles`
+
+Shows a role picker. The roles you pick can submit **Development tasks**. Everyone with the Verified role can submit the other kinds. Members with Manage Server always can.
+
+## Issue Panel
+`/admin issue-panel`
+
+Posts the "Report an FE-BUDDY issue" message with one button per issue type in the submit channel. Run it again after changing the panel's text; delete the old copy yourself.
+
 ---

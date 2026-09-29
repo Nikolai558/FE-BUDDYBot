@@ -13,3 +13,6 @@ services:
       #   sudo chown -R 1654:1654 data logs
       - ./data:/app/data
       - ./logs:/app/logs
+      # GitHub App private key (read-only). Only needed for issue reporting:
+      #   sudo chown 1654:1654 secrets/github-app.pem && sudo chmod 400 secrets/github-app.pem
+      - ./secrets:/app/secrets:ro

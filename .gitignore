@@ -3,6 +3,8 @@
 .env
 bot.env
 FEBuddyDiscordBot/data/
+FEBuddyDiscordBot/secrets/
+*.pem
 FEBuddyDiscordBot/logs/
 
 ## Ignore Visual Studio temporary files, build results, and

@@ -7,3 +7,5 @@ logs/
 docker-compose*.yml
 Dockerfile
 .dockerignore
+secrets/
+*.pem

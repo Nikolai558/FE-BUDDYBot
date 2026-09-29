@@ -64,3 +64,44 @@ Result: `/give-role` works only in #assign-my-roles, and `/admin`, `/staff` and 
 **#assign-my-roles** must let @everyone **View Channel**, **Send Messages** and **Use Application Commands**, so new, unverified members can run `/give-role` there.
 
 Discord apps sometimes keep old command permissions cached for a few minutes; restarting Discord refreshes them.
+
+## Issue reporting
+Members report FE-BUDDY issues from Discord. Set up the [GitHub App](GitHub%20App%20Setup.md) first. How it works is described in [GitHub Issue Sync](GitHub%20Issue%20Sync.md).
+
+All the bot's permissions below are **channel permissions** (Edit Channel → Permissions). The bot's role needs nothing new server-wide.
+
+### 1. Forum channel
+Create a **Forum** channel, e.g. `#fe-buddy-issues`. Forums need **Community** turned on (Server Settings → Enable Community).
+
+| Role | Allow | Deny |
+|---|---|---|
+| @everyone | View Channel, Read Message History | **Create Posts**, **Send Messages in Posts** |
+| Verified | Send Messages in Posts | |
+| Buddy Helper (the bot) | View Channel, Create Posts, Send Messages in Posts, Manage Posts, **Manage Channel**, Embed Links, Attach Files, Read Message History | |
+
+Only the bot creates posts, one per GitHub issue. It adds the forum's tags itself (that's what **Manage Channel** is for) and only it applies them, because GitHub's labels decide them.
+
+### 2. Submit channel
+A text channel for the report buttons, e.g. `#submit-an-issue`.
+
+| Role | Allow | Deny |
+|---|---|---|
+| @everyone | View Channel, Read Message History, Use Application Commands | Send Messages |
+| Buddy Helper (the bot) | View Channel, Send Messages, Embed Links | |
+
+### 3. Approval channel
+A member's second submission within an hour waits for approval in a private channel. FE-Buddy uses **#admin-chat**. The bot needs View Channel, Send Messages, Embed Links, Attach Files and Read Message History there.
+
+To ping **@Admin**, either make the Admin role mentionable (Server Settings → Roles → Admin → "Allow anyone to @mention this role"), or give the bot **Mention @everyone, @here, and All Roles** in #admin-chat only. `/admin issues` warns you if it can't ping the role.
+
+### 4. Tell the bot
+In #admin-chat:
+```
+/admin issues forum:#fe-buddy-issues submit-channel:#submit-an-issue approval-channel:#admin-chat approver-role:@Admin
+/admin dev-task-roles        → pick Contributor, Project Management and Admin
+/admin issue-panel
+```
+`/admin issues` lists anything still missing. Within two minutes the bot makes a post for every **open** FE-BUDDY issue. Closed issues aren't copied.
+
+### 5. Allow /report
+The report buttons work anywhere they're posted. The `/report` command follows the command permissions: under **Server Settings → Integrations → the bot → /report**, allow **#submit-an-issue**. The bot itself checks for the **Verified** role.

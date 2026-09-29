@@ -8,13 +8,15 @@ public sealed class InteractionHandler
     private readonly DiscordSocketClient _discord;
     private readonly InteractionService _interactions;
     private readonly IServiceProvider _services;
+    private readonly IssueInteractionHandler _issues;
     private readonly ILogger<InteractionHandler> _logger;
 
-    public InteractionHandler(DiscordSocketClient discord, InteractionService interactions, IServiceProvider services, ILogger<InteractionHandler> logger)
+    public InteractionHandler(DiscordSocketClient discord, InteractionService interactions, IServiceProvider services, IssueInteractionHandler issues, ILogger<InteractionHandler> logger)
     {
         _discord = discord;
         _interactions = interactions;
         _services = services;
+        _issues = issues;
         _logger = logger;
     }
 
@@ -28,6 +30,14 @@ public sealed class InteractionHandler
 
     private async Task HandleInteractionAsync(SocketInteraction interaction)
     {
+        // The issue report flow has its own buttons and modals (see IssueInteractionHandler). It calls GitHub,
+        // so run it off the gateway thread, like the command modules (RunMode.Async).
+        if (IssueInteractionHandler.CanHandle(interaction))
+        {
+            _ = Task.Run(() => _issues.HandleAsync(interaction));
+            return;
+        }
+
         try
         {
             SocketInteractionContext context = new(_discord, interaction);

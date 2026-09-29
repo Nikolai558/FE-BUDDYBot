@@ -12,6 +12,7 @@ public sealed class StartupService : IHostedService
     private readonly InteractionService _interactions;
     private readonly InteractionHandler _interactionHandler;
     private readonly GuildSettingsStore _settings;
+    private readonly IssueStore _issueStore;
     private readonly GuildDefaultsOptions _defaults;
     private readonly BotOptions _options;
     private readonly IHostApplicationLifetime _lifetime;
@@ -24,6 +25,7 @@ public sealed class StartupService : IHostedService
         InteractionService interactions,
         InteractionHandler interactionHandler,
         GuildSettingsStore settings,
+        IssueStore issueStore,
         IOptions<GuildDefaultsOptions> defaults,
         IOptions<BotOptions> options,
         IHostApplicationLifetime lifetime,
@@ -36,6 +38,7 @@ public sealed class StartupService : IHostedService
         _interactions = interactions;
         _interactionHandler = interactionHandler;
         _settings = settings;
+        _issueStore = issueStore;
         _defaults = defaults.Value;
         _options = options.Value;
         _lifetime = lifetime;
@@ -45,6 +48,7 @@ public sealed class StartupService : IHostedService
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await _settings.InitializeAsync(cancellationToken);
+        await _issueStore.InitializeAsync(cancellationToken);
         await _interactionHandler.InitializeAsync();
 
         _discord.Ready += OnReadyAsync;

@@ -10,26 +10,18 @@ namespace FEBuddyDiscordBot.DataAccess;
 /// </summary>
 public sealed class GuildSettingsStore
 {
-    private readonly string _connectionString;
+    private readonly BotDatabase _database;
     private readonly ulong _guildId;
     private readonly ILogger<GuildSettingsStore> _logger;
     private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     private GuildSettings? _cached;
 
-    public GuildSettingsStore(IOptions<BotOptions> options, IHostEnvironment environment, ILogger<GuildSettingsStore> logger)
+    public GuildSettingsStore(BotDatabase database, IOptions<BotOptions> options, ILogger<GuildSettingsStore> logger)
     {
+        _database = database;
         _logger = logger;
         _guildId = options.Value.GuildId;
-
-        string dataDirectory = Path.Combine(environment.ContentRootPath, options.Value.DataDirectory);
-        Directory.CreateDirectory(dataDirectory);
-
-        _connectionString = new SqliteConnectionStringBuilder
-        {
-            DataSource = Path.Combine(dataDirectory, "febuddybot.db"),
-            Pooling = false,
-        }.ToString();
     }
 
     /// <summary>True once settings exist in the database for this server.</summary>
@@ -40,7 +32,7 @@ public sealed class GuildSettingsStore
     /// </summary>
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        await using SqliteConnection connection = await OpenAsync(cancellationToken);
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
 
         await using (SqliteCommand create = connection.CreateCommand())
         {
@@ -97,7 +89,7 @@ public sealed class GuildSettingsStore
 
     private async Task SaveAsync(GuildSettings settings, CancellationToken cancellationToken)
     {
-        await using SqliteConnection connection = await OpenAsync(cancellationToken);
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
         await using SqliteCommand upsert = connection.CreateCommand();
         upsert.CommandText = """
             INSERT INTO guild_settings (guild_id, json, updated_utc) VALUES ($guildId, $json, $updated)
@@ -107,12 +99,5 @@ public sealed class GuildSettingsStore
         upsert.Parameters.AddWithValue("$json", JsonSerializer.Serialize(settings));
         upsert.Parameters.AddWithValue("$updated", DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
         await upsert.ExecuteNonQueryAsync(cancellationToken);
-    }
-
-    private async Task<SqliteConnection> OpenAsync(CancellationToken cancellationToken)
-    {
-        SqliteConnection connection = new(_connectionString);
-        await connection.OpenAsync(cancellationToken);
-        return connection;
     }
 }
