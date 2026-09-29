@@ -72,6 +72,45 @@ public sealed class IssueStoreTests : IDisposable
         Assert.Equal(SubmissionStatus.Pending, (await store.GetSubmissionAsync(id))!.Status);
     }
 
+    [Fact]
+    public async Task Post_state_comments_and_cursor_survive_a_restart()
+    {
+        IssueStore first = await CreateStoreAsync();
+        await first.SavePostAsync(3, 111, forumId: 555, reporterId: null);
+        await first.SavePostStateAsync(3, new PostState("#3 Title", false, ["Bug", "Won't fix"], "ABC"));
+        DateTimeOffset edited = new(2026, 9, 29, 6, 32, 34, TimeSpan.Zero);
+        await first.SaveCommentAsync(9001, 3, 222, edited);
+        await first.SetSyncCursorAsync(edited);
+
+        IssueStore second = await CreateStoreAsync();
+
+        PostState? state = await second.GetPostStateAsync(3);
+        Assert.True(state!.Matches(new PostState("#3 Title", false, ["Bug", "Won't fix"], "ABC")));
+        Assert.False(state.Matches(new PostState("#3 Title", true, ["Bug", "Won't fix"], "ABC")));
+        Assert.False(state.Matches(new PostState("#3 Title", false, ["Bug"], "ABC")));
+        Assert.Equal((222UL, edited), await second.GetCommentAsync(9001));
+        Assert.Equal(edited, await second.GetSyncCursorAsync());
+        Assert.NotNull(await second.GetOldestPostTimeAsync());
+    }
+
+    [Fact]
+    public async Task Forgetting_a_post_forgets_its_state_and_comments()
+    {
+        IssueStore store = await CreateStoreAsync();
+        Assert.Null(await store.GetSyncCursorAsync());
+        Assert.Null(await store.GetOldestPostTimeAsync());
+
+        await store.SavePostAsync(3, 111, forumId: 555, reporterId: null);
+        await store.SavePostStateAsync(3, new PostState("#3", true, [], "x"));
+        await store.SaveCommentAsync(9001, 3, 222, DateTimeOffset.UtcNow);
+
+        await store.ForgetPostAsync(3);
+
+        Assert.Null(store.GetPostId(3));
+        Assert.Null(await store.GetPostStateAsync(3));
+        Assert.Null(await store.GetCommentAsync(9001));
+    }
+
     public void Dispose()
     {
         try
