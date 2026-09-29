@@ -17,13 +17,15 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
     private readonly GuildSettingsStore _settings;
     private readonly GitHubApi _github;
     private readonly IssueForumService _issueForum;
+    private readonly BotOptions _options;
     private readonly ILogger<AdminSlashCommands> _logger;
 
-    public AdminSlashCommands(GuildSettingsStore settings, GitHubApi github, IssueForumService issueForum, ILogger<AdminSlashCommands> logger)
+    public AdminSlashCommands(GuildSettingsStore settings, GitHubApi github, IssueForumService issueForum, IOptions<BotOptions> options, ILogger<AdminSlashCommands> logger)
     {
         _settings = settings;
         _github = github;
         _issueForum = issueForum;
+        _options = options.Value;
         _logger = logger;
     }
 
@@ -100,7 +102,8 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         [Summary("submit-channel", "Channel for the report-an-issue buttons"), ChannelTypes(ChannelType.Text)] ITextChannel? submitChannel = null,
         [Summary("approval-channel", "Private channel where extra submissions wait for approval"), ChannelTypes(ChannelType.Text)] ITextChannel? approvalChannel = null,
         [Summary("approver-role", "Role pinged to approve submissions (anyone with Manage Server can approve too)")] IRole? approverRole = null,
-        [Summary("per-hour", "Submissions a member may make per hour before the rest need approval"), MinValue(1), MaxValue(10)] int? perHour = null)
+        [Summary("per-hour", "Submissions a member may make per hour before the rest need approval"), MinValue(1), MaxValue(10)] int? perHour = null,
+        [Summary("replies", "Which replies in issue posts become GitHub comments")] IssueReplyMode? replies = null)
     {
         // Adding the forum's tags can take a moment.
         await DeferAsync(ephemeral: true);
@@ -112,6 +115,7 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
             if (approvalChannel is not null) s.IssueApprovalChannelId = approvalChannel.Id;
             if (approverRole is not null) s.IssueApproverRoleId = approverRole.Id;
             if (perHour is int limit) s.IssueSubmissionsPerHour = limit;
+            if (replies is IssueReplyMode mode) s.IssueReplyMode = mode;
         });
 
         _logger.LogInformation("Config: issue settings updated by {User}", Context.User.Username);
@@ -225,6 +229,14 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         return problems;
     }
 
+    private string RepliesSetting(GuildSettings s) => s.IssueReplyMode switch
+    {
+        IssueReplyMode.MirrorAll when !_options.MessageContentIntent =>
+            "⚠️ every reply, but the bot can't read message text (Bot:MessageContentIntent is off), so only \"Send to GitHub\" works",
+        IssueReplyMode.MirrorAll => "every reply",
+        _ => "only messages sent with \"Send to GitHub\"",
+    };
+
     /// <summary>Returns why the bot can't assign this role, or null if it can.</summary>
     private string? CantAssign(IRole role)
     {
@@ -270,7 +282,8 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
                 $"Approval channel: {Channel(s.IssueApprovalChannelId)}\n" +
                 $"Approver role: {Role(s.IssueApproverRoleId)}\n" +
                 $"Dev-task roles: {(s.DevTaskRoleIds is { Length: > 0 } ids ? string.Join(" ", ids.Select(id => Role(id))) : "⚠️ not set")}\n" +
-                $"Submissions per hour before approval: {s.IssueSubmissionsPerHour}")
+                $"Submissions per hour before approval: {s.IssueSubmissionsPerHour}\n" +
+                $"Replies to GitHub: {RepliesSetting(s)}")
             .WithFooter("Change with /admin events, roles, channels, issues, dev-task-roles")
             .Build();
     }

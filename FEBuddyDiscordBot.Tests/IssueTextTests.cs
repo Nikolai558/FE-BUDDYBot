@@ -77,6 +77,25 @@ public sealed class IssueTextTests
         Assert.Contains("Too long to include here", body);
     }
 
+    [Fact]
+    public void Pastes_as_many_files_as_fit()
+    {
+        IssueDraft draft = BugDraft();
+        string half = new('x', IssueText.MaxBodyLength / 2 - 1000);
+        draft.Attachments =
+        [
+            new("one.log", "text/plain", 1, "u", half),
+            new("two.log", "text/plain", 1, "u", half),
+            new("three.log", "text/plain", 1, "u", half),
+        ];
+
+        string body = IssueText.BuildBody(draft, null);
+
+        Assert.True(body.Length <= IssueText.MaxBodyLength);
+        Assert.Equal(2, body.Split(half).Length - 1);
+        Assert.Contains("Contents of <code>three.log</code></summary>\n\nToo long to include here", body);
+    }
+
     [Theory]
     [InlineData("ping @octocat and @org/team", "ping @​octocat and @​org/team")]
     [InlineData("mail me at nik@example.com", "mail me at nik@example.com")]

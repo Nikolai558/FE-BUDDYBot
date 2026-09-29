@@ -20,6 +20,13 @@ public sealed class BotOptions
     /// <summary>Optional Discord webhook that is notified when the bot restarts after losing its connection.</summary>
     public string? DisconnectWebhookUrl { get; set; }
 
+    /// <summary>
+    /// Ask Discord for message text (the privileged Message Content intent), needed to copy every reply in issue posts
+    /// to GitHub. Turn it on in the Developer Portal (Bot → Message Content Intent) FIRST: if the portal doesn't allow
+    /// it, Discord refuses the connection and the bot can't start.
+    /// </summary>
+    public bool MessageContentIntent { get; set; }
+
     /// <summary>How long the bot may stay disconnected from Discord before the app exits so Docker can restart it.</summary>
     public int DisconnectTimeoutSeconds { get; set; } = 60;
 

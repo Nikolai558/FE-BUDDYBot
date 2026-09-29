@@ -93,6 +93,31 @@ public sealed class GitHubApi
         await ReadAsync<GitHubIssue>(response, $"update issue #{number}", cancellationToken);
     }
 
+    public async Task<GitHubComment> CreateCommentAsync(int issueNumber, string body, CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Post, $"repos/{Repository}/issues/{issueNumber}/comments",
+            JsonContent.Create(new { body }), cancellationToken: cancellationToken);
+        return await ReadAsync<GitHubComment>(response, $"comment on issue #{issueNumber}", cancellationToken);
+    }
+
+    /// <summary>Edit a comment. Returns false if it no longer exists (someone deleted it on GitHub).</summary>
+    public async Task<bool> UpdateCommentAsync(long commentId, string body, CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Patch, $"repos/{Repository}/issues/comments/{commentId}",
+            JsonContent.Create(new { body }), cancellationToken: cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound) return false;
+        await ReadAsync<GitHubComment>(response, $"edit comment {commentId}", cancellationToken);
+        return true;
+    }
+
+    /// <summary>Delete a comment. Already-deleted comments are fine.</summary>
+    public async Task DeleteCommentAsync(long commentId, CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Delete, $"repos/{Repository}/issues/comments/{commentId}", cancellationToken: cancellationToken);
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.NoContent) return;
+        if (!response.IsSuccessStatusCode) throw new GitHubException($"GitHub refused to delete comment {commentId}: HTTP {(int)response.StatusCode}");
+    }
+
     public async Task<GitHubIssue> GetIssueAsync(int number, CancellationToken cancellationToken = default)
     {
         using HttpResponseMessage response = await SendAsync(HttpMethod.Get, $"repos/{Repository}/issues/{number}", cancellationToken: cancellationToken);

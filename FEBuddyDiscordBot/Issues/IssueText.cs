@@ -22,13 +22,25 @@ public static partial class IssueText
         "your", "add", "should", "would", "could", "feb", "buddy", "fe-buddy", "febuddy", "bug", "feature", "request",
     };
 
-    public static string BuildBody(IssueDraft draft, string? postUrl)
+    public static string BuildBody(IssueDraft draft, string? postUrl) =>
+        FitFiles(pasted => Build(draft, postUrl, pasted), draft.Attachments.Count(f => f.InlineText is not null));
+
+    /// <summary>
+    /// Build text with as many text files pasted in as GitHub's length limit allows: all of them if they fit,
+    /// otherwise the first ones that do. <paramref name="build"/> takes how many files to paste.
+    /// </summary>
+    public static string FitFiles(Func<int, string> build, int pasteable)
     {
-        string body = Build(draft, postUrl, includeFileContents: true);
-        return body.Length <= MaxBodyLength ? body : Build(draft, postUrl, includeFileContents: false);
+        for (int pasted = pasteable; pasted > 0; pasted--)
+        {
+            string text = build(pasted);
+            if (text.Length <= MaxBodyLength) return text;
+        }
+
+        return build(0);
     }
 
-    private static string Build(IssueDraft draft, string? postUrl, bool includeFileContents)
+    private static string Build(IssueDraft draft, string? postUrl, int filesToPaste)
     {
         StringBuilder body = new();
 
@@ -39,7 +51,7 @@ public static partial class IssueText
             switch (field.Input)
             {
                 case FieldInput.Files:
-                    AppendAttachments(body, draft.Attachments, postUrl, includeFileContents);
+                    AppendAttachments(body, draft.Attachments, postUrl, "view it in the post", filesToPaste);
                     break;
                 case FieldInput.Confirm:
                     body.Append("- [X] ").Append(IssueTemplate.SearchedConfirmation).Append('\n');
@@ -63,10 +75,15 @@ public static partial class IssueText
     public static string Credit(IssueDraft draft) => draft.Credit switch
     {
         CreditStyle.DiscordId => $"Discord user ID `{draft.UserId}`",
+        CreditStyle.GitHub when draft.GitHubLogin is string login => $"@{login}",
         _ => $"Discord user `{draft.UserName}`",
     };
 
-    private static void AppendAttachments(StringBuilder body, IReadOnlyList<DraftAttachment> attachments, string? postUrl, bool includeFileContents)
+    /// <summary>
+    /// The attachment list: one line per file with a link to where it is on Discord, then the first
+    /// <paramref name="filesToPaste"/> text files' contents in collapsed sections.
+    /// </summary>
+    internal static void AppendAttachments(StringBuilder body, IReadOnlyList<DraftAttachment> attachments, string? link, string linkText, int filesToPaste)
     {
         if (attachments.Count == 0)
         {
@@ -78,20 +95,21 @@ public static partial class IssueText
         {
             body.Append("- 📎 `").Append(file.FileName).Append("` (")
                 .Append(MediaType(file.ContentType)).Append(", ").Append(FormatSize(file.Size)).Append(") was attached on Discord")
-                .Append(postUrl is null ? "." : $": [view it in the post]({postUrl})").Append('\n');
+                .Append(link is null ? "." : $": [{linkText}]({link})").Append('\n');
         }
 
+        int pasted = 0;
         foreach (DraftAttachment file in attachments.Where(f => f.InlineText is not null))
         {
             body.Append("\n<details><summary>Contents of <code>").Append(file.FileName).Append("</code></summary>\n\n");
-            if (includeFileContents)
+            if (pasted++ < filesToPaste)
             {
                 string fence = Fence(file.InlineText!);
                 body.Append(fence).Append("text\n").Append(file.InlineText!.TrimEnd()).Append('\n').Append(fence).Append('\n');
             }
             else
             {
-                body.Append("Too long to include here. Open the file in the Discord post.\n");
+                body.Append("Too long to include here. Open the file on Discord.\n");
             }
 
             body.Append("\n</details>\n");

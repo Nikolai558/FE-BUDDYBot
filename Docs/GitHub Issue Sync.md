@@ -1,6 +1,6 @@
 # GitHub Issue Sync (design)
 
-Status: Stages 1 and 2 built (submitting; GitHub → Discord sync). Stages 3–4 not built yet; see [Stages](#stages).
+Status: Stages 1–3 built (submitting; GitHub ↔ Discord sync; /link-github). Stage 4 (webhooks) not built; see [Stages](#stages).
 
 ## Summary
 
@@ -101,5 +101,5 @@ When more than 5 apply, keep in order: type → closed/status → priority → v
 
 - [x] **Stage 1 — Submit:** GitHub App setup, GitHub client, forum + tags, submit panel + flows, duplicate check, rate limit + approval queue, create issue + post, backfill open issues, posts for issues opened on GitHub (polling).
 - [x] **Stage 2 — GitHub → Discord:** comments (and their edits), title/body edits, labels → tags, close/reopen + lock/archive, deleted posts re-created.
-- [ ] **Stage 3 — Discord → GitHub:** message mirroring (+ edits/deletes), attachment notes + log inlining, mode toggle + "Send to GitHub" action, `/link-github` (device flow) + GitHub credit option, Message Content intent on.
+- [x] **Stage 3 — Discord → GitHub:** message mirroring (+ edits/deletes), attachment notes + log inlining, mode toggle + "Send to GitHub" action, `/link-github` (device flow) + GitHub credit option, Message Content intent (opt-in with `Bot:MessageContentIntent`). Also: paste as many log files as fit.
 - [ ] **Stage 4 — Webhooks:** `bot.febuddy.com` via Cloudflare tunnel, signature check; polling drops to an hourly safety net.

@@ -32,7 +32,8 @@ public sealed class StartupService : IHostedService
         ILogger<StartupService> logger,
         // Resolved here only so they subscribe to Discord events before the bot connects.
         LoggingService loggingService,
-        RoleAssignmentService roleAssignmentService)
+        RoleAssignmentService roleAssignmentService,
+        IssueReplyService issueReplyService)
     {
         _discord = discord;
         _interactions = interactions;

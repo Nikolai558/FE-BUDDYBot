@@ -40,4 +40,18 @@ public sealed record GuildSettings
 
     /// <summary>Submissions a member may make per hour before the rest need approval.</summary>
     public int IssueSubmissionsPerHour { get; set; } = 1;
+
+    /// <summary>Which replies in issue posts become GitHub comments.</summary>
+    public IssueReplyMode IssueReplyMode { get; set; } = IssueReplyMode.MirrorAll;
+}
+
+public enum IssueReplyMode
+{
+    /// <summary>Every reply in an issue post becomes a GitHub comment.</summary>
+    [ChoiceDisplay("Every reply")]
+    MirrorAll,
+
+    /// <summary>Only replies sent with the "Send to GitHub" message action.</summary>
+    [ChoiceDisplay("Only \"Send to GitHub\"")]
+    SendToGitHubOnly,
 }

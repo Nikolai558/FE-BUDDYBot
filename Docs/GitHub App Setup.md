@@ -35,6 +35,8 @@ You do this once. It takes about 10 minutes.
 ## 2. Note the App ID
 On the page that opens (the app's **General** settings), copy the **App ID** near the top. It's a number like `1234567`. It isn't secret. GitHub also suggests using the **Client ID** instead; the bot uses the App ID, and both still work.
 
+Also copy the **Client ID** from the same page (it starts with `Iv`). It isn't secret either. It's only used by `/link-github`, which lets members link their GitHub account.
+
 ## 3. Generate a private key
 1. Scroll down to **Private keys → Generate a private key**.
 2. Your browser downloads a file like `fe-buddy-bot.2026-09-28.private-key.pem`.
@@ -63,6 +65,7 @@ The bot finds the installation by itself; you don't need the installation ID.
 2. Add to `bot.env`:
    ```
    GitHub__AppId=1234567
+   GitHub__ClientId=Iv23li...
    GitHub__PrivateKeyPath=secrets/github-app.pem
    ```
 3. Make sure `docker-compose.yml` has the `./secrets:/app/secrets:ro` volume (see the repository copy), then restart the bot (see [Deployment](Deployment.md#common-commands)).

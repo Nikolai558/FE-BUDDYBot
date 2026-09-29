@@ -78,6 +78,16 @@ public sealed class IssueStore
                     key   TEXT PRIMARY KEY,
                     value TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS discord_replies (
+                    message_id   INTEGER PRIMARY KEY,
+                    issue_number INTEGER NOT NULL,
+                    comment_id   INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS github_links (
+                    user_id    INTEGER PRIMARY KEY,
+                    login      TEXT NOT NULL,
+                    linked_utc TEXT NOT NULL
+                );
                 """;
             await create.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -299,6 +309,70 @@ public sealed class IssueStore
         await using SqliteCommand select = connection.CreateCommand();
         select.CommandText = "SELECT MIN(created_utc) FROM issue_posts";
         return await select.ExecuteScalarAsync(cancellationToken) is string value ? DateTimeOffset.Parse(value, CultureInfo.InvariantCulture) : null;
+    }
+
+    // ---- Discord → GitHub ----
+
+    /// <summary>The issue whose forum post this thread is, or null if it isn't one.</summary>
+    public int? GetIssueForThread(ulong threadId) =>
+        _posts.FirstOrDefault(p => p.Value.ThreadId == threadId) is { Value.ThreadId: not 0 } post ? post.Key : null;
+
+    /// <summary>The GitHub comment a Discord message was copied to, or null if it wasn't.</summary>
+    public async Task<(int IssueNumber, long CommentId)?> GetReplyAsync(ulong messageId, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT issue_number, comment_id FROM discord_replies WHERE message_id = $message";
+        select.Parameters.AddWithValue("$message", (long)messageId);
+        await using SqliteDataReader reader = await select.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? (reader.GetInt32(0), reader.GetInt64(1)) : null;
+    }
+
+    public async Task SaveReplyAsync(ulong messageId, int issueNumber, long commentId, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand insert = connection.CreateCommand();
+        insert.CommandText = "INSERT OR REPLACE INTO discord_replies (message_id, issue_number, comment_id) VALUES ($message, $issue, $comment)";
+        insert.Parameters.AddWithValue("$message", (long)messageId);
+        insert.Parameters.AddWithValue("$issue", issueNumber);
+        insert.Parameters.AddWithValue("$comment", commentId);
+        await insert.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    public async Task DeleteReplyAsync(ulong messageId, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand delete = connection.CreateCommand();
+        delete.CommandText = "DELETE FROM discord_replies WHERE message_id = $message";
+        delete.Parameters.AddWithValue("$message", (long)messageId);
+        await delete.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>The GitHub account a member linked with /link-github, or null.</summary>
+    public async Task<string?> GetGitHubLoginAsync(ulong userId, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT login FROM github_links WHERE user_id = $user";
+        select.Parameters.AddWithValue("$user", (long)userId);
+        return await select.ExecuteScalarAsync(cancellationToken) as string;
+    }
+
+    /// <summary>Link a member to a GitHub account, or unlink them when <paramref name="login"/> is null.</summary>
+    public async Task SetGitHubLoginAsync(ulong userId, string? login, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = login is null
+            ? "DELETE FROM github_links WHERE user_id = $user"
+            : """
+              INSERT INTO github_links (user_id, login, linked_utc) VALUES ($user, $login, $now)
+              ON CONFLICT(user_id) DO UPDATE SET login = excluded.login, linked_utc = excluded.linked_utc;
+              """;
+        command.Parameters.AddWithValue("$user", (long)userId);
+        command.Parameters.AddWithValue("$login", (object?)login ?? DBNull.Value);
+        command.Parameters.AddWithValue("$now", Now());
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static string Now() => DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
