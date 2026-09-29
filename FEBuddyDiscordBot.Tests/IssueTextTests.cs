@@ -104,6 +104,15 @@ public sealed class IssueTextTests
     }
 
     [Theory]
+    [InlineData("text/plain; charset=utf-8", "text/plain")]
+    [InlineData("image/png", "image/png")]
+    [InlineData(null, "file")]
+    public void Media_type_drops_parameters(string? contentType, string expected)
+    {
+        Assert.Equal(expected, IssueText.MediaType(contentType));
+    }
+
+    [Theory]
     [InlineData("FE-Buddy.log", "text/plain", 100, true)]
     [InlineData("FE-Buddy.log", null, 100, true)]
     [InlineData("notes.TXT", "application/octet-stream", 100, true)]

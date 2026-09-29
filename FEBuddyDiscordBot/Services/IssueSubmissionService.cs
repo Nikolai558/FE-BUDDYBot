@@ -332,8 +332,9 @@ public sealed class IssueSubmissionService
 
     private sealed record DownloadedFile(string FileName, string? ContentType, byte[] Bytes, string Url)
     {
+        // Text files were already redacted when downloaded.
         public DraftAttachment ToDraftAttachment() => new(FileName, ContentType, Bytes.Length, Url,
-            IssueText.CanInline(FileName, ContentType, Bytes.Length) ? IssueText.Redact(Encoding.UTF8.GetString(Bytes)) : null);
+            IssueText.CanInline(FileName, ContentType, Bytes.Length) ? Encoding.UTF8.GetString(Bytes) : null);
     }
 
     private async Task<List<DownloadedFile>> DownloadAsync(IEnumerable<IAttachment> attachments, List<string> notes)
@@ -351,7 +352,18 @@ public sealed class IssueSubmissionService
 
             try
             {
-                files.Add(new DownloadedFile(attachment.Filename, attachment.ContentType, await http.GetByteArrayAsync(attachment.Url), attachment.Url));
+                byte[] bytes = await http.GetByteArrayAsync(attachment.Url);
+
+                // The bot re-posts files publicly (forum post, approval message), so redact text files before that too.
+                // Only rewrite files that had something redacted, so other files are copied byte for byte.
+                if (IssueText.IsTextFile(attachment.Filename, attachment.ContentType)
+                    && Encoding.UTF8.GetString(bytes) is string text
+                    && IssueText.Redact(text) is string redacted && redacted != text)
+                {
+                    bytes = Encoding.UTF8.GetBytes(redacted);
+                }
+
+                files.Add(new DownloadedFile(attachment.Filename, attachment.ContentType, bytes, attachment.Url));
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {

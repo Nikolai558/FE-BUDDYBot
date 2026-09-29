@@ -77,7 +77,7 @@ public static partial class IssueText
         foreach (DraftAttachment file in attachments)
         {
             body.Append("- 📎 `").Append(file.FileName).Append("` (")
-                .Append(file.ContentType ?? "file").Append(", ").Append(FormatSize(file.Size)).Append(") was attached on Discord")
+                .Append(MediaType(file.ContentType)).Append(", ").Append(FormatSize(file.Size)).Append(") was attached on Discord")
                 .Append(postUrl is null ? "." : $": [view it in the post]({postUrl})").Append('\n');
         }
 
@@ -118,11 +118,18 @@ public static partial class IssueText
         _ => string.Create(CultureInfo.InvariantCulture, $"{bytes / 1024.0 / 1024.0:0.0} MB"),
     };
 
-    /// <summary>True for files small enough, and textual enough, to paste into the issue.</summary>
+    /// <summary>Text files (logs and the like), which get their GitHub tokens redacted wherever the bot re-posts them.</summary>
+    public static bool IsTextFile(string fileName, string? contentType) =>
+        contentType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) == true
+        || Path.GetExtension(fileName).ToLowerInvariant() is ".log" or ".txt";
+
+    /// <summary>True for text files small enough to paste into the issue.</summary>
     public static bool CanInline(string fileName, string? contentType, int size) =>
-        size <= MaxInlineBytes
-        && (contentType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) == true
-            || Path.GetExtension(fileName).ToLowerInvariant() is ".log" or ".txt");
+        size <= MaxInlineBytes && IsTextFile(fileName, contentType);
+
+    /// <summary>A content type without its parameters, e.g. "text/plain" for "text/plain; charset=utf-8".</summary>
+    public static string MediaType(string? contentType) =>
+        string.IsNullOrWhiteSpace(contentType) ? "file" : contentType.Split(';')[0].Trim();
 
     /// <summary>
     /// Stops @name and @org/team in submitted text from notifying GitHub users: the issue is posted by the bot,
