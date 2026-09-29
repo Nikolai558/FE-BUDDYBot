@@ -33,7 +33,7 @@ You do this once. It takes about 10 minutes.
 6. Click **Create GitHub App**.
 
 ## 2. Note the App ID
-On the page that opens (the app's **General** settings), copy the **App ID** near the top. It's a number like `1234567`. It isn't secret.
+On the page that opens (the app's **General** settings), copy the **App ID** near the top. It's a number like `1234567`. It isn't secret. GitHub also suggests using the **Client ID** instead; the bot uses the App ID, and both still work.
 
 ## 3. Generate a private key
 1. Scroll down to **Private keys → Generate a private key**.
@@ -42,8 +42,8 @@ On the page that opens (the app's **General** settings), copy the **App ID** nea
 **This file is the app's password.** Don't commit it, paste it in chat, or email it. If it leaks, delete it on the same page and generate a new one.
 
 ## 4. Install the app
-1. In the app's settings, click **Install App** (left menu) → **Install** next to your account.
-2. Choose **Only select repositories** and pick:
+1. In the app's settings, click **Install App** (left menu) → **Install** next to your account. This page only picks the account.
+2. The next page asks which repositories. Choose **Only select repositories**, open the **Select repositories** dropdown and pick:
    * `FE-BUDDY` (production)
    * `FE-BUDDYBot-sandbox` (for testing; create it first as a **private** repository if it doesn't exist)
 3. Click **Install**.
