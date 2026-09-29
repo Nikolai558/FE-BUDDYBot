@@ -114,10 +114,10 @@ public sealed class GitHubApi
     /// <summary>Make the next <see cref="ListOpenIssuesIfChangedAsync"/> return the full list even if nothing changed.</summary>
     public void ForgetOpenIssuesETag() => _openIssuesETag = null;
 
-    /// <summary>The most recent published releases (pre-releases included), newest first.</summary>
+    /// <summary>FE-BUDDY's most recent published releases (pre-releases included), newest first.</summary>
     public async Task<IReadOnlyList<GitHubRelease>> ListReleasesAsync(int count, CancellationToken cancellationToken = default)
     {
-        using HttpResponseMessage response = await SendAsync(HttpMethod.Get, $"repos/{Repository}/releases?per_page={count}", cancellationToken: cancellationToken);
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Get, $"repos/{_options.ReleasesRepository}/releases?per_page={count}", cancellationToken: cancellationToken);
         return (await ReadAsync<List<GitHubRelease>>(response, "list releases", cancellationToken)).Where(r => !r.Draft).ToList();
     }
 

@@ -20,6 +20,9 @@ public sealed class GitHubOptions
     /// <summary>The repository issues are created in, as "owner/name".</summary>
     public string Repository { get; set; } = "Nikolai558/FE-BUDDY";
 
+    /// <summary>Where the version dropdown's releases come from. Stays FE-BUDDY even when testing against a sandbox.</summary>
+    public string ReleasesRepository { get; set; } = "Nikolai558/FE-BUDDY";
+
     /// <summary>How often to check GitHub for new issues.</summary>
     public int PollIntervalSeconds { get; set; } = 120;
 
