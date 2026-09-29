@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Data.Sqlite;
 
 namespace FEBuddyDiscordBot.DataAccess;
@@ -16,6 +17,13 @@ public enum SubmissionStatus
 }
 
 public sealed record Submission(long Id, ulong UserId, SubmissionStatus Status, string DraftJson, ulong? ApprovalMessageId);
+
+/// <summary>What a forum post shows: its title, whether it's open, its tags, and a hash of the issue text.</summary>
+public sealed record PostState(string Title, bool IsOpen, string[] Tags, string BodyHash)
+{
+    public bool Matches(PostState other) =>
+        Title == other.Title && IsOpen == other.IsOpen && BodyHash == other.BodyHash && Tags.SequenceEqual(other.Tags);
+}
 
 /// <summary>
 /// Which forum post belongs to which GitHub issue, and each member's submissions (for the hourly limit and approvals).
@@ -56,6 +64,20 @@ public sealed class IssueStore
                     created_utc         TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS ix_issue_submissions_user ON issue_submissions (user_id, created_utc);
+                CREATE TABLE IF NOT EXISTS issue_post_state (
+                    issue_number INTEGER PRIMARY KEY,
+                    json         TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS issue_comments (
+                    comment_id   INTEGER PRIMARY KEY,
+                    issue_number INTEGER NOT NULL,
+                    message_id   INTEGER NOT NULL,
+                    updated_utc  TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS sync_state (
+                    key   TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
                 """;
             await create.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -179,6 +201,104 @@ public sealed class IssueStore
         update.Parameters.AddWithValue("$issue", issueNumber);
         update.Parameters.AddWithValue("$id", submissionId);
         await update.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    // ---- GitHub → Discord sync ----
+
+    /// <summary>What a post last showed, so the sync only touches posts whose issue actually changed.</summary>
+    public async Task<PostState?> GetPostStateAsync(int issueNumber, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT json FROM issue_post_state WHERE issue_number = $issue";
+        select.Parameters.AddWithValue("$issue", issueNumber);
+        return await select.ExecuteScalarAsync(cancellationToken) is string json ? JsonSerializer.Deserialize<PostState>(json) : null;
+    }
+
+    public async Task SavePostStateAsync(int issueNumber, PostState state, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand upsert = connection.CreateCommand();
+        upsert.CommandText = """
+            INSERT INTO issue_post_state (issue_number, json) VALUES ($issue, $json)
+            ON CONFLICT(issue_number) DO UPDATE SET json = excluded.json;
+            """;
+        upsert.Parameters.AddWithValue("$issue", issueNumber);
+        upsert.Parameters.AddWithValue("$json", JsonSerializer.Serialize(state));
+        await upsert.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>Forget an issue's post (e.g. someone deleted it in Discord). Its comments are forgotten too.</summary>
+    public async Task ForgetPostAsync(int issueNumber, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand delete = connection.CreateCommand();
+        delete.CommandText = """
+            DELETE FROM issue_posts WHERE issue_number = $issue;
+            DELETE FROM issue_post_state WHERE issue_number = $issue;
+            DELETE FROM issue_comments WHERE issue_number = $issue;
+            """;
+        delete.Parameters.AddWithValue("$issue", issueNumber);
+        await delete.ExecuteNonQueryAsync(cancellationToken);
+
+        _posts.TryRemove(issueNumber, out _);
+    }
+
+    /// <summary>The Discord message a GitHub comment was copied to, and the comment's last edit time then.</summary>
+    public async Task<(ulong MessageId, DateTimeOffset UpdatedUtc)?> GetCommentAsync(long commentId, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT message_id, updated_utc FROM issue_comments WHERE comment_id = $comment";
+        select.Parameters.AddWithValue("$comment", commentId);
+        await using SqliteDataReader reader = await select.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken)) return null;
+        return ((ulong)reader.GetInt64(0), DateTimeOffset.Parse(reader.GetString(1), CultureInfo.InvariantCulture));
+    }
+
+    public async Task SaveCommentAsync(long commentId, int issueNumber, ulong messageId, DateTimeOffset updatedUtc, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand upsert = connection.CreateCommand();
+        upsert.CommandText = """
+            INSERT INTO issue_comments (comment_id, issue_number, message_id, updated_utc) VALUES ($comment, $issue, $message, $updated)
+            ON CONFLICT(comment_id) DO UPDATE SET message_id = excluded.message_id, updated_utc = excluded.updated_utc;
+            """;
+        upsert.Parameters.AddWithValue("$comment", commentId);
+        upsert.Parameters.AddWithValue("$issue", issueNumber);
+        upsert.Parameters.AddWithValue("$message", (long)messageId);
+        upsert.Parameters.AddWithValue("$updated", updatedUtc.ToString("O", CultureInfo.InvariantCulture));
+        await upsert.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>Where the GitHub sync got to. Null before the first sync.</summary>
+    public async Task<DateTimeOffset?> GetSyncCursorAsync(CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT value FROM sync_state WHERE key = 'github_cursor'";
+        return await select.ExecuteScalarAsync(cancellationToken) is string value ? DateTimeOffset.Parse(value, CultureInfo.InvariantCulture) : null;
+    }
+
+    public async Task SetSyncCursorAsync(DateTimeOffset cursor, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand upsert = connection.CreateCommand();
+        upsert.CommandText = """
+            INSERT INTO sync_state (key, value) VALUES ('github_cursor', $value)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+            """;
+        upsert.Parameters.AddWithValue("$value", cursor.ToString("O", CultureInfo.InvariantCulture));
+        await upsert.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    /// <summary>When the oldest forum post was made, or null if there are none.</summary>
+    public async Task<DateTimeOffset?> GetOldestPostTimeAsync(CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT MIN(created_utc) FROM issue_posts";
+        return await select.ExecuteScalarAsync(cancellationToken) is string value ? DateTimeOffset.Parse(value, CultureInfo.InvariantCulture) : null;
     }
 
     private static string Now() => DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);

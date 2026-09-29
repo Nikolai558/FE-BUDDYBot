@@ -23,11 +23,28 @@ public sealed record GitHubIssue(
     [property: JsonPropertyName("state_reason")] string? StateReason,
     [property: JsonPropertyName("labels")] IReadOnlyList<GitHubLabel> Labels,
     [property: JsonPropertyName("user")] GitHubUser? User,
-    [property: JsonPropertyName("pull_request")] object? PullRequest)
+    [property: JsonPropertyName("pull_request")] object? PullRequest,
+    [property: JsonPropertyName("closed_by")] GitHubUser? ClosedBy = null)
 {
     public bool IsPullRequest => PullRequest is not null;
     public bool IsOpen => State == "open";
     public IEnumerable<string> LabelNames => Labels.Select(l => l.Name);
+}
+
+public sealed record GitHubApp([property: JsonPropertyName("id")] long Id);
+
+public sealed record GitHubComment(
+    [property: JsonPropertyName("id")] long Id,
+    [property: JsonPropertyName("html_url")] string HtmlUrl,
+    [property: JsonPropertyName("issue_url")] string IssueUrl,
+    [property: JsonPropertyName("body")] string? Body,
+    [property: JsonPropertyName("user")] GitHubUser? User,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
+    [property: JsonPropertyName("performed_via_github_app")] GitHubApp? PerformedViaGitHubApp)
+{
+    /// <summary>The issue number, from the end of <see cref="IssueUrl"/>.</summary>
+    public int IssueNumber => int.Parse(IssueUrl[(IssueUrl.LastIndexOf('/') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
 }
 
 public sealed record GitHubRelease(
@@ -58,6 +75,9 @@ public sealed class GitHubApi
     public bool IsConfigured => _options.IsConfigured;
 
     public string Repository => _options.Repository;
+
+    /// <summary>The GitHub App's ID, to recognize comments the bot itself made.</summary>
+    public long AppId => _options.AppId;
 
     public async Task<GitHubIssue> CreateIssueAsync(string title, string body, IEnumerable<string> labels, CancellationToken cancellationToken = default)
     {
@@ -108,6 +128,32 @@ public sealed class GitHubApi
 
             issues.AddRange(batch.Where(i => !i.IsPullRequest));
             if (batch.Count < 100) return issues;
+        }
+    }
+
+    /// <summary>Issues (open and closed, pull requests excluded) changed at or after <paramref name="since"/>, oldest change first.</summary>
+    public async Task<List<GitHubIssue>> ListIssuesUpdatedSinceAsync(DateTimeOffset since, CancellationToken cancellationToken = default)
+    {
+        List<GitHubIssue> issues = await ListAllAsync<GitHubIssue>(
+            $"repos/{Repository}/issues?state=all&sort=updated&direction=asc&since={Iso(since)}", "list changed issues", cancellationToken);
+        return issues.Where(i => !i.IsPullRequest).ToList();
+    }
+
+    /// <summary>Issue comments created or edited at or after <paramref name="since"/>, oldest first.</summary>
+    public Task<List<GitHubComment>> ListCommentsUpdatedSinceAsync(DateTimeOffset since, CancellationToken cancellationToken = default) =>
+        ListAllAsync<GitHubComment>($"repos/{Repository}/issues/comments?sort=updated&direction=asc&since={Iso(since)}", "list changed comments", cancellationToken);
+
+    private static string Iso(DateTimeOffset time) => Uri.EscapeDataString(time.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", System.Globalization.CultureInfo.InvariantCulture));
+
+    private async Task<List<T>> ListAllAsync<T>(string url, string action, CancellationToken cancellationToken)
+    {
+        List<T> all = [];
+        for (int page = 1; ; page++)
+        {
+            using HttpResponseMessage response = await SendAsync(HttpMethod.Get, $"{url}&per_page=100&page={page}", cancellationToken: cancellationToken);
+            List<T> batch = await ReadAsync<List<T>>(response, action, cancellationToken);
+            all.AddRange(batch);
+            if (batch.Count < 100) return all;
         }
     }
 

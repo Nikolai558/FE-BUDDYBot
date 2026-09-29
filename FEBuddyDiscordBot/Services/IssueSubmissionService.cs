@@ -120,7 +120,8 @@ public sealed class IssueSubmissionService
     /// Discord only waits 3 seconds for the modal, so this never waits long: after a failure it doesn't
     /// ask GitHub again for a minute. The background sync keeps the list fresh.
     /// </summary>
-    public async Task<IReadOnlyList<string>?> GetVersionsAsync()
+    /// <param name="timeout">How long to wait for GitHub; the 1.5-second default suits opening a form.</param>
+    public async Task<IReadOnlyList<string>?> GetVersionsAsync(TimeSpan? timeout = null)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         if (_releases is { } cached && now - cached.Fetched < ReleaseCacheLifetime) return cached.Versions;
@@ -128,8 +129,8 @@ public sealed class IssueSubmissionService
 
         try
         {
-            using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(1.5));
-            IReadOnlyList<GitHubRelease> releases = await _github.ListReleasesAsync(20, timeout.Token);
+            using CancellationTokenSource cancel = new(timeout ?? TimeSpan.FromSeconds(1.5));
+            IReadOnlyList<GitHubRelease> releases = await _github.ListReleasesAsync(20, cancel.Token);
             if (releases.Count == 0) return null;
 
             List<string> versions = releases.Select(r => r.TagName.TrimStart('v', 'V')).ToList();
