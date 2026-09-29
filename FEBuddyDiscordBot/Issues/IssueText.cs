@@ -75,7 +75,7 @@ public static partial class IssueText
     public static string Credit(IssueDraft draft) => draft.Credit switch
     {
         CreditStyle.DiscordId => $"Discord user ID `{draft.UserId}`",
-        CreditStyle.GitHub when draft.GitHubLogin is string login => $"@{login}",
+        CreditStyle.GitHub when draft.GitHubLogin is string login => $"@{login} (Discord user `{draft.UserName}`)",
         _ => $"Discord user `{draft.UserName}`",
     };
 
@@ -153,9 +153,13 @@ public static partial class IssueText
     /// Stops @name and @org/team in submitted text from notifying GitHub users: the issue is posted by the bot,
     /// so anyone on Discord could otherwise ping any GitHub account. E-mail addresses are left alone.
     /// </summary>
-    public static string EscapeMentions(string text) => MentionPattern().Replace(text, "@​");
+    public static string EscapeMentions(string text) =>
+        MentionPattern().Replace(text, m => m.Groups["keep"].Success ? m.Value : "@​");
 
-    [GeneratedRegex(@"(?<![\w.@/`])@(?=[A-Za-z0-9])")]
+    // Code (`...` and ``` blocks) and links are matched first and kept as they are: GitHub doesn't turn @ in them
+    // into mentions, and a hidden character would break them. Any other @ not preceded by a letter or digit
+    // (e-mail addresses are) gets a zero-width space after it, which GitHub doesn't treat as a mention.
+    [GeneratedRegex(@"(?<keep>`+[^`]*`+|https?://\S+)|(?<!\w)@(?=[A-Za-z0-9])")]
     private static partial Regex MentionPattern();
 
     /// <summary>Blanks out anything that looks like a GitHub token.</summary>

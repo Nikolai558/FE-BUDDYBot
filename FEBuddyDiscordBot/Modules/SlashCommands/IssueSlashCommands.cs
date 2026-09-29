@@ -42,13 +42,15 @@ public sealed class IssueSlashCommands : InteractionModuleBase<SocketInteraction
     [MessageCommand("Send to GitHub")]
     public async Task SendToGitHubAsync(IMessage message)
     {
-        if (_replies.IssueFor(Context.Channel) is not int issue)
+        // Archived posts aren't cached after a restart, so go by the channel ID rather than Context.Channel.
+        ulong? threadId = Context.Interaction.ChannelId;
+        if (_replies.IssueFor(threadId) is not int issue)
         {
             await RespondAsync("This only works on messages in an issue's forum post.", ephemeral: true);
             return;
         }
 
-        if (message is not IUserMessage userMessage || message.Author.IsBot || message.Id == Context.Channel.Id)
+        if (message is not IUserMessage userMessage || message.Author.IsBot || message.Id == threadId)
         {
             await RespondAsync("Only members' replies can be sent to GitHub.", ephemeral: true);
             return;
@@ -63,12 +65,12 @@ public sealed class IssueSlashCommands : InteractionModuleBase<SocketInteraction
         await DeferAsync(ephemeral: true);
         try
         {
-            string? url = await _replies.SendAsync(userMessage, issue);
+            string? url = await _replies.SendAsync(userMessage, threadId!.Value, issue);
             await FollowupAsync(url is null ? "That message is already on GitHub." : $"Sent to GitHub: <{url}>", ephemeral: true);
         }
-        catch (GitHubException ex)
+        catch (Exception ex)
         {
-            _logger.LogWarning("Issues: Send to GitHub failed for message {MessageId}: {Error}", message.Id, ex.Message);
+            _logger.LogWarning("Issues: Send to GitHub failed for message {MessageId}: {Error}", message.Id, ex is GitHubException ? ex.Message : ex.ToString());
             await FollowupAsync("GitHub didn't accept it. Please try again in a few minutes.", ephemeral: true);
         }
     }
@@ -87,7 +89,7 @@ public sealed class IssueSlashCommands : InteractionModuleBase<SocketInteraction
         {
             code = await _deviceFlow.StartAsync();
         }
-        catch (Exception ex) when (ex is GitHubException or HttpRequestException)
+        catch (Exception ex) when (ex is GitHubException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             _logger.LogWarning("Issues: couldn't start GitHub linking: {Error}", ex.Message);
             await RespondAsync("GitHub didn't answer. Please try again in a few minutes.", ephemeral: true);
@@ -108,7 +110,7 @@ public sealed class IssueSlashCommands : InteractionModuleBase<SocketInteraction
         {
             login = await _deviceFlow.WaitForLoginAsync(code);
         }
-        catch (Exception ex) when (ex is GitHubException or HttpRequestException)
+        catch (Exception ex) when (ex is GitHubException or HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             _logger.LogWarning("Issues: GitHub linking failed for {User}: {Error}", Context.User.Username, ex.Message);
             login = null;

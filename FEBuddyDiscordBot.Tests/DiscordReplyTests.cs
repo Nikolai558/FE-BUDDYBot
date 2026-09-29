@@ -23,6 +23,14 @@ public sealed class DiscordReplyTests
         Assert.Equal(expected, Convert(content));
     }
 
+    [Theory]
+    [InlineData("<t:99999999999999999>", "<t:99999999999999999>")]
+    [InlineData("<@123456789012345678901234567890>", "@​unknown-user")]
+    public void Impossible_ids_and_times_do_not_throw(string content, string expected)
+    {
+        Assert.Equal(expected, Convert(content));
+    }
+
     [Fact]
     public void Tokens_in_messages_are_redacted()
     {
@@ -42,7 +50,7 @@ public sealed class DiscordReplyTests
     {
         string comment = DiscordReply.BuildComment(new ReplyAuthor("Nik", "nikolai558", "Nikolai558"), "Hi", "u", []);
 
-        Assert.StartsWith("**Nik** ([Nikolai558](https://github.com/Nikolai558)) [on Discord](u):", comment);
+        Assert.StartsWith("**Nik** ([Nikolai558](https://github.com/Nikolai558), Discord user `nikolai558`) [on Discord](u):", comment);
     }
 
     [Fact]

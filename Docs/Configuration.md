@@ -44,7 +44,7 @@ The GitHub App used for [issue reporting](GitHub%20Issue%20Sync.md). Issue featu
 | Setting | Default | Description |
 |---|---|---|
 | `AppId` | `0` | The GitHub App's App ID. |
-| `ClientId` | *(empty)* | The GitHub App's Client ID (starts with `Iv`). Only needed for `/link-github`. Not a secret. |
+| `ClientId` | FE-BUDDY Bot's | The GitHub App's Client ID (starts with `Iv`). Only needed for `/link-github`. Not a secret. |
 | `PrivateKeyPath` | *(empty)* | Path to the app's private key (`.pem`), relative to the app folder. In Docker: `secrets/github-app.pem`. **The file is a secret.** |
 | `Repository` | `Nikolai558/FE-BUDDY` | Where issues are created. Development uses `Nikolai558/FE-BUDDYBot-sandbox`. |
 | `ReleasesRepository` | `Nikolai558/FE-BUDDY` | Where the version dropdown's releases come from. Stays FE-BUDDY in development. |

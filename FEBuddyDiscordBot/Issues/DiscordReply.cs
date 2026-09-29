@@ -21,13 +21,19 @@ public static partial class DiscordReply
     /// </summary>
     public static string ToGitHubMarkdown(string content, Func<ulong, string?> userName, Func<ulong, string?> roleName, Func<ulong, string?> channelName)
     {
-        string text = UserMention().Replace(content, m => "@" + (userName(ulong.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)) ?? "unknown-user"));
-        text = RoleMention().Replace(text, m => "@" + (roleName(ulong.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)) ?? "unknown-role"));
-        text = ChannelMention().Replace(text, m => "#" + (channelName(ulong.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)) ?? "unknown-channel"));
+        // Names are looked up by ID; an ID too long to be real simply isn't found.
+        static string? Lookup(Func<ulong, string?> find, string id) =>
+            ulong.TryParse(id, NumberStyles.None, CultureInfo.InvariantCulture, out ulong value) ? find(value) : null;
+
+        string text = UserMention().Replace(content, m => "@" + (Lookup(userName, m.Groups[1].Value) ?? "unknown-user"));
+        text = RoleMention().Replace(text, m => "@" + (Lookup(roleName, m.Groups[1].Value) ?? "unknown-role"));
+        text = ChannelMention().Replace(text, m => "#" + (Lookup(channelName, m.Groups[1].Value) ?? "unknown-channel"));
         text = CustomEmoji().Replace(text, ":$1:");
         text = Timestamp().Replace(text, m =>
-            DateTimeOffset.FromUnixTimeSeconds(long.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).UtcDateTime
-                .ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture));
+            long.TryParse(m.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out long seconds)
+            && seconds <= DateTimeOffset.MaxValue.ToUnixTimeSeconds()
+                ? DateTimeOffset.FromUnixTimeSeconds(seconds).UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture)
+                : m.Value);
 
         return IssueText.EscapeMentions(IssueText.Redact(text));
     }
@@ -44,7 +50,9 @@ public static partial class DiscordReply
         StringBuilder body = new();
 
         body.Append("**").Append(EscapeName(author.DisplayName)).Append("** (")
-            .Append(author.GitHubLogin is string login ? $"[{login}](https://github.com/{login})" : $"Discord user `{author.UserName}`")
+            // The Discord username stays even with a linked GitHub account, so a wrongly linked account stands out.
+            .Append(author.GitHubLogin is string login ? $"[{login}](https://github.com/{login}), " : "")
+            .Append($"Discord user `{author.UserName}`")
             .Append(") [on Discord](").Append(messageUrl).Append("):\n\n");
 
         if (quote is not null)

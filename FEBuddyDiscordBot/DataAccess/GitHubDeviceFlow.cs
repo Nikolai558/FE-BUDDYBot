@@ -53,13 +53,23 @@ public sealed class GitHubDeviceFlow
         {
             await Task.Delay(interval, cancellationToken);
 
-            using HttpResponseMessage response = await PostAsync(http, "login/oauth/access_token", new()
+            TokenResponse? token;
+            try
             {
-                ["client_id"] = _options.ClientId!,
-                ["device_code"] = code.Code,
-                ["grant_type"] = "urn:ietf:params:oauth:grant-type:device_code",
-            }, cancellationToken);
-            TokenResponse? token = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
+                using HttpResponseMessage response = await PostAsync(http, "login/oauth/access_token", new()
+                {
+                    ["client_id"] = _options.ClientId!,
+                    ["device_code"] = code.Code,
+                    ["grant_type"] = "urn:ietf:params:oauth:grant-type:device_code",
+                }, cancellationToken);
+                token = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or System.Text.Json.JsonException
+                                       || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                // A hiccup (timeout, GitHub error page): the member may still approve, so keep waiting.
+                continue;
+            }
 
             switch (token?.Error)
             {

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Issues;
@@ -43,15 +44,16 @@ public sealed class IssueReplyService
         _discord.MessageReceived += OnMessageReceivedAsync;
         _discord.MessageUpdated += OnMessageUpdatedAsync;
         _discord.MessageDeleted += OnMessageDeletedAsync;
+        _discord.MessagesBulkDeleted += OnMessagesBulkDeletedAsync;
     }
 
     /// <summary>True when every reply is copied: the setting is on and the bot can read message text.</summary>
     public bool MirrorsAllReplies => _settings.Current.IssueReplyMode == IssueReplyMode.MirrorAll && _options.MessageContentIntent;
 
     /// <summary>The issue a channel is the forum post of, or null if it isn't an issue post.</summary>
-    public int? IssueFor(IChannel? channel) =>
-        channel is IThreadChannel thread
-        && _store.GetIssueForThread(thread.Id) is int issue
+    public int? IssueFor(ulong? channelId) =>
+        channelId is ulong id
+        && _store.GetIssueForThread(id) is int issue
         && _forum.Forum is { } forum && _store.HasPostIn(issue, forum.Id)
             ? issue
             : null;
@@ -60,9 +62,9 @@ public sealed class IssueReplyService
 
     private Task OnMessageReceivedAsync(SocketMessage message)
     {
-        if (MirrorsAllReplies && IsReply(message) && IssueFor(message.Channel) is int issue)
+        if (MirrorsAllReplies && IsReply(message) && IssueFor(message.Channel.Id) is int issue)
         {
-            _ = Task.Run(() => TryAsync(() => SendAsync((IUserMessage)message, issue), message));
+            _ = Task.Run(() => TryAsync(() => SendAsync((IUserMessage)message, message.Channel.Id, issue), message));
         }
 
         return Task.CompletedTask;
@@ -72,9 +74,9 @@ public sealed class IssueReplyService
     {
         // Without the Message Content intent an edit arrives with no text, so edits can't be followed.
         // Embeds loading for a link also counts as an update; only a real edit changes the text.
-        if (_options.MessageContentIntent && IsReply(after) && after.EditedTimestamp is not null && IssueFor(after.Channel) is not null)
+        if (_options.MessageContentIntent && IsReply(after) && after.EditedTimestamp is not null && IssueFor(channel.Id) is int issue)
         {
-            _ = Task.Run(() => TryAsync(() => UpdateAsync((IUserMessage)after), after));
+            _ = Task.Run(() => TryAsync(() => UpdateAsync((IUserMessage)after, channel.Id, issue), after));
         }
 
         return Task.CompletedTask;
@@ -82,20 +84,20 @@ public sealed class IssueReplyService
 
     private Task OnMessageDeletedAsync(Cacheable<IMessage, ulong> message, Cacheable<IMessageChannel, ulong> channel)
     {
-        _ = Task.Run(async () =>
+        if (IssueFor(channel.Id) is not null) _ = Task.Run(() => DeleteAsync(message.Id));
+        return Task.CompletedTask;
+    }
+
+    // Moderators purging messages arrive as one bulk event, not one delete per message.
+    private Task OnMessagesBulkDeletedAsync(IReadOnlyCollection<Cacheable<IMessage, ulong>> messages, Cacheable<IMessageChannel, ulong> channel)
+    {
+        if (IssueFor(channel.Id) is not null)
         {
-            try
+            _ = Task.Run(async () =>
             {
-                if (await _store.GetReplyAsync(message.Id) is not { } reply) return;
-                await _github.DeleteCommentAsync(reply.CommentId);
-                await _store.DeleteReplyAsync(message.Id);
-                _logger.LogInformation("Issues: deleted GitHub comment {CommentId} on #{Number} (its Discord message was deleted)", reply.CommentId, reply.IssueNumber);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Issues: couldn't delete the GitHub comment for deleted message {MessageId}: {Error}", message.Id, ex.Message);
-            }
-        });
+                foreach (Cacheable<IMessage, ulong> message in messages) await DeleteAsync(message.Id);
+            });
+        }
 
         return Task.CompletedTask;
     }
@@ -103,7 +105,7 @@ public sealed class IssueReplyService
     /// <summary>A member's message (not the bot's, a webhook's, or a system message like "pinned a message").</summary>
     private static bool IsReply(IMessage message) =>
         message is IUserMessage { Type: MessageType.Default or MessageType.Reply } && !message.Author.IsBot && !message.Author.IsWebhook
-        && message.Channel is IThreadChannel thread && message.Id != thread.Id;
+        && message.Id != message.Channel.Id;
 
     private async Task TryAsync(Func<Task> work, IMessage message)
     {
@@ -127,36 +129,92 @@ public sealed class IssueReplyService
     }
 
     // ---- Copying ----
+    // Copying, editing and deleting one message never overlap: each holds that message's lock. Otherwise a delete
+    // (or edit) arriving while the copy is still being made would find nothing to delete, and the comment would stay.
+
+    private readonly SemaphoreSlim[] _messageLocks = Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
+
+    /// <summary>Messages deleted before (or while) they were copied, so a late copy doesn't publish them.</summary>
+    private readonly ConcurrentDictionary<ulong, DateTimeOffset> _deleted = new();
+
+    private async Task<T> WithMessageLockAsync<T>(ulong messageId, Func<Task<T>> work)
+    {
+        SemaphoreSlim gate = _messageLocks[messageId % (ulong)_messageLocks.Length];
+        await gate.WaitAsync();
+        try
+        {
+            return await work();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
 
     /// <summary>
-    /// Copy a message to its issue as a GitHub comment. Returns the comment's URL, or null if it was already copied.
+    /// Copy a message to its issue as a GitHub comment. Returns the comment's URL, or null if it was already copied
+    /// (or has been deleted).
     /// </summary>
-    public async Task<string?> SendAsync(IUserMessage message, int issueNumber)
+    public Task<string?> SendAsync(IUserMessage message, ulong threadId, int issueNumber) => WithMessageLockAsync(message.Id, async () =>
     {
-        if (await _store.GetReplyAsync(message.Id) is not null) return null;
+        if (_deleted.ContainsKey(message.Id) || await _store.GetReplyAsync(message.Id) is not null) return null;
 
-        GitHubComment comment = await _github.CreateCommentAsync(issueNumber, await BuildCommentAsync(message));
+        GitHubComment comment = await _github.CreateCommentAsync(issueNumber, await BuildCommentAsync(message, threadId));
         await _store.SaveReplyAsync(message.Id, issueNumber, comment.Id);
         _logger.LogInformation("Issues: copied {User}'s message {MessageId} to GitHub comment {CommentId} on #{Number}",
             message.Author.Username, message.Id, comment.Id, issueNumber);
-        return comment.HtmlUrl;
-    }
+        return (string?)comment.HtmlUrl;
+    });
 
-    private async Task UpdateAsync(IUserMessage message)
+    private Task UpdateAsync(IUserMessage message, ulong threadId, int issueNumber) => WithMessageLockAsync(message.Id, async () =>
     {
-        if (await _store.GetReplyAsync(message.Id) is not { } reply) return;
+        if (await _store.GetReplyAsync(message.Id) is not { } reply)
+        {
+            // Edited before its copy was made: copy it now, with the edited text (the pending copy then skips it).
+            if (MirrorsAllReplies && !_deleted.ContainsKey(message.Id))
+            {
+                GitHubComment comment = await _github.CreateCommentAsync(issueNumber, await BuildCommentAsync(message, threadId));
+                await _store.SaveReplyAsync(message.Id, issueNumber, comment.Id);
+            }
 
-        if (!await _github.UpdateCommentAsync(reply.CommentId, await BuildCommentAsync(message)))
+            return 0;
+        }
+
+        if (!await _github.UpdateCommentAsync(reply.CommentId, await BuildCommentAsync(message, threadId)))
         {
             // Deleted on GitHub: stop following it.
             await _store.DeleteReplyAsync(message.Id);
-            return;
+            return 0;
         }
 
         _logger.LogInformation("Issues: updated GitHub comment {CommentId} on #{Number} after an edit", reply.CommentId, reply.IssueNumber);
-    }
+        return 0;
+    });
 
-    private async Task<string> BuildCommentAsync(IUserMessage message)
+    private Task DeleteAsync(ulong messageId) => WithMessageLockAsync(messageId, async () =>
+    {
+        _deleted[messageId] = DateTimeOffset.UtcNow;
+        foreach ((ulong id, DateTimeOffset when) in _deleted)
+        {
+            if (DateTimeOffset.UtcNow - when > TimeSpan.FromHours(1)) _deleted.TryRemove(id, out _);
+        }
+
+        try
+        {
+            if (await _store.GetReplyAsync(messageId) is not { } reply) return 0;
+            await _github.DeleteCommentAsync(reply.CommentId);
+            await _store.DeleteReplyAsync(messageId);
+            _logger.LogInformation("Issues: deleted GitHub comment {CommentId} on #{Number} (its Discord message was deleted)", reply.CommentId, reply.IssueNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Issues: couldn't delete the GitHub comment for deleted message {MessageId}: {Error}", messageId, ex.Message);
+        }
+
+        return 0;
+    });
+
+    private async Task<string> BuildCommentAsync(IUserMessage message, ulong threadId)
     {
         SocketGuild? guild = _forum.Guild;
 
@@ -165,20 +223,47 @@ public sealed class IssueReplyService
             message.Author.Username,
             await _store.GetGitHubLoginAsync(message.Author.Id));
 
-        string markdown = DiscordReply.ToGitHubMarkdown(
-            message.Content,
+        string Convert(string text) => DiscordReply.ToGitHubMarkdown(
+            text,
             id => guild?.GetUser(id)?.DisplayName,
             id => guild?.GetRole(id)?.Name,
-            id => guild?.GetChannel(id)?.Name);
+            id => guild?.GetChannel(id) is { } channel && IsPublic(channel) ? channel.Name : null);
 
-        ReplyQuote? quote = message.ReferencedMessage is { } replied
-            ? new ReplyQuote(
-                (replied.Author as IGuildUser)?.DisplayName ?? replied.Author.GlobalName ?? replied.Author.Username,
-                string.IsNullOrWhiteSpace(replied.Content) ? replied.Embeds.FirstOrDefault()?.Description ?? "" : replied.Content)
-            : null;
+        ReplyQuote? quote = null;
+        if (message.ReferencedMessage is { } replied)
+        {
+            // Replies to the bot's copies of GitHub comments quote the GitHub commenter, not the bot.
+            IEmbed? embed = replied.Embeds.FirstOrDefault();
+            string name = replied.Author.IsBot && embed?.Author?.Name is string commenter
+                ? commenter
+                : (replied.Author as IGuildUser)?.DisplayName ?? replied.Author.GlobalName ?? replied.Author.Username;
+            string text = string.IsNullOrWhiteSpace(replied.Content) ? embed?.Description ?? "" : replied.Content;
 
-        return DiscordReply.BuildComment(author, markdown, message.GetJumpUrl(), await ReadAttachmentsAsync(message), quote);
+            // The quoted message wasn't necessarily meant for GitHub, so it gets the same cleaning as the reply.
+            quote = new ReplyQuote(name, Convert(text));
+        }
+
+        string url = $"https://discord.com/channels/{guild?.Id}/{threadId}/{message.Id}";
+        return DiscordReply.BuildComment(author, Convert(message.Content), url, await ReadAttachmentsAsync(message), quote);
     }
+
+    /// <summary>
+    /// Whether @everyone can see a channel, so its name can go on GitHub. Private channels and threads just show
+    /// as "#unknown-channel".
+    /// </summary>
+    private static bool IsPublic(SocketGuildChannel channel)
+    {
+        if (channel is SocketThreadChannel thread) return thread.Type != ThreadType.PrivateThread && IsPublic(thread.ParentChannel);
+
+        SocketRole everyone = channel.Guild.EveryoneRole;
+        return channel.GetPermissionOverwrite(everyone)?.ViewChannel switch
+        {
+            PermValue.Deny => false,
+            PermValue.Allow => true,
+            _ => everyone.Permissions.ViewChannel,
+        };
+    }
+
 
     /// <summary>The message's files, with small text files read (and redacted) so they can be pasted into the comment.</summary>
     private async Task<List<DraftAttachment>> ReadAttachmentsAsync(IMessage message)
