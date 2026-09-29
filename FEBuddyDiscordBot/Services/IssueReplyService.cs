@@ -230,12 +230,14 @@ public sealed class IssueReplyService
             id => guild?.GetChannel(id) is { } channel && IsPublic(channel) ? channel.Name : null);
 
         ReplyQuote? quote = null;
-        if (message.ReferencedMessage is { } replied)
+        IEmbed? embed = message.ReferencedMessage?.Embeds.FirstOrDefault();
+
+        // Replies to the bot's copies of GitHub comments quote the GitHub commenter. Replies to the bot's own
+        // messages (the post's first message, "Closed on GitHub", ...) aren't quoted: the comment is on that issue anyway.
+        if (message.ReferencedMessage is { } replied && !(replied.Author.Id == _discord.CurrentUser.Id && embed?.Author is null))
         {
-            // Replies to the bot's copies of GitHub comments quote the GitHub commenter, not the bot.
-            IEmbed? embed = replied.Embeds.FirstOrDefault();
-            string name = replied.Author.IsBot && embed?.Author?.Name is string commenter
-                ? commenter
+            string name = replied.Author.Id == _discord.CurrentUser.Id
+                ? embed!.Author!.Value.Name
                 : (replied.Author as IGuildUser)?.DisplayName ?? replied.Author.GlobalName ?? replied.Author.Username;
             string text = string.IsNullOrWhiteSpace(replied.Content) ? embed?.Description ?? "" : replied.Content;
 
