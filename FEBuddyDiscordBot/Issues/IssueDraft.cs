@@ -38,6 +38,9 @@ public sealed class IssueDraft
     public string? GitHubLogin { get; set; }
     public DateTimeOffset StartedUtc { get; set; } = DateTimeOffset.UtcNow;
 
+    /// <summary>Hidden in the issue body, so the issue can be found if GitHub creates it but its answer never arrives.</summary>
+    public string SubmissionKey { get; set; } = Guid.NewGuid().ToString("N");
+
     [JsonIgnore]
     public IssueTemplate Template => IssueTemplate.For(Kind);
 

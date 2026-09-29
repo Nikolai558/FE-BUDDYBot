@@ -6,7 +6,14 @@ using FEBuddyDiscordBot.Models;
 
 namespace FEBuddyDiscordBot.DataAccess;
 
-public sealed class GitHubException(string message) : Exception(message);
+/// <param name="outcomeUnknown">
+/// True when the request may have reached GitHub but no answer came back (e.g. a timeout), so what it asked for
+/// might have happened anyway.
+/// </param>
+public sealed class GitHubException(string message, bool outcomeUnknown = false) : Exception(message)
+{
+    public bool OutcomeUnknown { get; } = outcomeUnknown;
+}
 
 public sealed record GitHubLabel([property: JsonPropertyName("name")] string Name);
 
@@ -91,6 +98,74 @@ public sealed class GitHubApi
         using HttpResponseMessage response = await SendAsync(HttpMethod.Patch, $"repos/{Repository}/issues/{number}",
             JsonContent.Create(new { body }), cancellationToken: cancellationToken);
         await ReadAsync<GitHubIssue>(response, $"update issue #{number}", cancellationToken);
+    }
+
+    /// <summary>
+    /// Create an issue whose body contains <paramref name="marker"/>. If GitHub's answer is lost (e.g. a timeout),
+    /// look for the issue by its marker before giving up, so a slow GitHub doesn't lead to a duplicate.
+    /// </summary>
+    public async Task<GitHubIssue> CreateIssueOnceAsync(string title, string body, IEnumerable<string> labels, string marker)
+    {
+        try
+        {
+            return await CreateIssueAsync(title, body, labels);
+        }
+        catch (GitHubException ex) when (ex.OutcomeUnknown)
+        {
+            if (await FindAfterLostAnswerAsync(() => FindRecentIssueContainingAsync(marker)) is { } issue) return issue;
+            throw;
+        }
+    }
+
+    /// <summary>Create a comment containing <paramref name="marker"/>, finding it again if GitHub's answer is lost.</summary>
+    public async Task<GitHubComment> CreateCommentOnceAsync(int issueNumber, string body, string marker)
+    {
+        DateTimeOffset started = DateTimeOffset.UtcNow.AddMinutes(-1);
+        try
+        {
+            return await CreateCommentAsync(issueNumber, body);
+        }
+        catch (GitHubException ex) when (ex.OutcomeUnknown)
+        {
+            if (await FindAfterLostAnswerAsync(() => FindCommentContainingAsync(issueNumber, marker, started)) is { } comment) return comment;
+            throw;
+        }
+    }
+
+    /// <summary>Look a few times, a few seconds apart, for something GitHub may have created after all.</summary>
+    private static async Task<T?> FindAfterLostAnswerAsync<T>(Func<Task<T?>> find) where T : class
+    {
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3));
+            try
+            {
+                if (await find() is { } found) return found;
+            }
+            catch (GitHubException)
+            {
+                // Still unreachable; try again.
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>The newest issue whose body contains <paramref name="text"/>, among the 30 most recently created.</summary>
+    public async Task<GitHubIssue?> FindRecentIssueContainingAsync(string text, CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Get,
+            $"repos/{Repository}/issues?state=all&sort=created&direction=desc&per_page=30", cancellationToken: cancellationToken);
+        List<GitHubIssue> issues = await ReadAsync<List<GitHubIssue>>(response, "list recent issues", cancellationToken);
+        return issues.FirstOrDefault(i => i.Body?.Contains(text, StringComparison.Ordinal) == true);
+    }
+
+    /// <summary>A comment on the issue made at or after <paramref name="since"/> whose body contains <paramref name="text"/>.</summary>
+    public async Task<GitHubComment?> FindCommentContainingAsync(int issueNumber, string text, DateTimeOffset since, CancellationToken cancellationToken = default)
+    {
+        List<GitHubComment> comments = await ListAllAsync<GitHubComment>(
+            $"repos/{Repository}/issues/{issueNumber}/comments?since={Iso(since)}", "list recent comments", cancellationToken);
+        return comments.FirstOrDefault(c => c.Body?.Contains(text, StringComparison.Ordinal) == true);
     }
 
     public async Task<GitHubComment> CreateCommentAsync(int issueNumber, string body, CancellationToken cancellationToken = default)
@@ -207,7 +282,7 @@ public sealed class GitHubApi
         }
         catch (Exception ex) when (ex is HttpRequestException || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
         {
-            throw new GitHubException($"GitHub could not be reached: {ex.Message}");
+            throw new GitHubException($"GitHub could not be reached: {ex.Message}", outcomeUnknown: true);
         }
     }
 

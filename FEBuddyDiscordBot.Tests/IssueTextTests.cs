@@ -38,6 +38,17 @@ public sealed class IssueTextTests
     }
 
     [Fact]
+    public void Body_hides_a_marker_that_discord_never_shows()
+    {
+        IssueDraft draft = BugDraft();
+        string body = IssueText.BuildBody(draft, "https://discord.com/channels/1/2");
+
+        Assert.EndsWith($"</sub>\n<!-- fe-buddy-discord:{draft.SubmissionKey} -->\n", body);
+        Assert.DoesNotContain("fe-buddy-discord", IssueText.ForDiscord(body));
+        Assert.DoesNotContain("Submitted from", IssueText.ForDiscord(body));
+    }
+
+    [Fact]
     public void Footer_credits_the_reporter_and_links_the_post()
     {
         IssueDraft draft = BugDraft();

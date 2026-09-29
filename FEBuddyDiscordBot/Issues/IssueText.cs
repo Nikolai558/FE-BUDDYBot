@@ -67,10 +67,17 @@ public static partial class IssueText
 
         body.Append("---\n\n<sub>Submitted from the ")
             .Append(postUrl is null ? "FE-BUDDY Discord" : $"[FE-BUDDY Discord]({postUrl})")
-            .Append(" by ").Append(Credit(draft)).Append(".</sub>\n");
+            .Append(" by ").Append(Credit(draft)).Append(".</sub>\n")
+            .Append(Marker(draft.SubmissionKey)).Append('\n');
 
         return body.ToString();
     }
+
+    /// <summary>
+    /// An invisible tag the bot puts in what it posts to GitHub. If GitHub creates an issue or comment but its answer
+    /// never arrives, the bot finds it again by this tag instead of reporting a failure (and causing a duplicate).
+    /// </summary>
+    public static string Marker(string key) => $"<!-- fe-buddy-discord:{key} -->";
 
     public static string Credit(IssueDraft draft) => draft.Credit switch
     {

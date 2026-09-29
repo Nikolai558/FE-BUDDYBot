@@ -47,7 +47,7 @@ builder.Services.AddHttpClient(StatusUpdateService.HttpClientName, http => http.
 builder.Services.AddHttpClient(GitHubApi.HttpClientName, http =>
 {
     http.BaseAddress = new Uri("https://api.github.com/");
-    http.Timeout = TimeSpan.FromSeconds(20);
+    http.Timeout = TimeSpan.FromSeconds(60);
     http.DefaultRequestHeaders.UserAgent.ParseAdd("FE-BUDDYBot (+https://github.com/Nikolai558/FE-BUDDYBot)");
     http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
     http.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");

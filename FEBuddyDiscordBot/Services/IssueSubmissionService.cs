@@ -179,7 +179,7 @@ public sealed class IssueSubmissionService
         try
         {
             (issue, threadId) = await _forum.CreateIssueWithPostAsync(
-                () => _github.CreateIssueAsync(draft.FullTitle, IssueText.BuildBody(draft, postUrl: null), draft.Template.Labels),
+                () => _github.CreateIssueOnceAsync(draft.FullTitle, IssueText.BuildBody(draft, postUrl: null), draft.Template.Labels, IssueText.Marker(draft.SubmissionKey)),
                 draft,
                 uploads);
         }

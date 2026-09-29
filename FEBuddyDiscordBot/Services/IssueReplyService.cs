@@ -159,7 +159,7 @@ public sealed class IssueReplyService
     {
         if (_deleted.ContainsKey(message.Id) || await _store.GetReplyAsync(message.Id) is not null) return null;
 
-        GitHubComment comment = await _github.CreateCommentAsync(issueNumber, await BuildCommentAsync(message, threadId));
+        GitHubComment comment = await _github.CreateCommentOnceAsync(issueNumber, await BuildCommentAsync(message, threadId), MarkerFor(message.Id));
         await _store.SaveReplyAsync(message.Id, issueNumber, comment.Id);
         _logger.LogInformation("Issues: copied {User}'s message {MessageId} to GitHub comment {CommentId} on #{Number}",
             message.Author.Username, message.Id, comment.Id, issueNumber);
@@ -173,7 +173,7 @@ public sealed class IssueReplyService
             // Edited before its copy was made: copy it now, with the edited text (the pending copy then skips it).
             if (MirrorsAllReplies && !_deleted.ContainsKey(message.Id))
             {
-                GitHubComment comment = await _github.CreateCommentAsync(issueNumber, await BuildCommentAsync(message, threadId));
+                GitHubComment comment = await _github.CreateCommentOnceAsync(issueNumber, await BuildCommentAsync(message, threadId), MarkerFor(message.Id));
                 await _store.SaveReplyAsync(message.Id, issueNumber, comment.Id);
             }
 
@@ -244,8 +244,11 @@ public sealed class IssueReplyService
         }
 
         string url = $"https://discord.com/channels/{guild?.Id}/{threadId}/{message.Id}";
-        return DiscordReply.BuildComment(author, Convert(message.Content), url, await ReadAttachmentsAsync(message), quote);
+        return DiscordReply.BuildComment(author, Convert(message.Content), url, await ReadAttachmentsAsync(message), quote) + MarkerFor(message.Id) + "\n";
     }
+
+    /// <summary>The hidden tag in a copied message's comment, to find it if GitHub's answer is lost.</summary>
+    private static string MarkerFor(ulong messageId) => IssueText.Marker($"message-{messageId}");
 
     /// <summary>
     /// Whether @everyone can see a channel, so its name can go on GitHub. Private channels and threads just show
