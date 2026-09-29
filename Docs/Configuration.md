@@ -37,6 +37,17 @@ Sends a heartbeat to an [Uptime Kuma](https://github.com/louislam/uptime-kuma) p
 | `Url` | *(empty)* | Push URL **without** the `?status=up…` part, e.g. `http://host:3001/api/push/abc123`. **Secret.** |
 | `IntervalSeconds` | `60` | How often to send it. |
 
+### `GitHub`
+The GitHub App used for [issue reporting](GitHub%20Issue%20Sync.md). Issue features stay off until `AppId` and `PrivateKeyPath` are set. Setting up the app: [GitHub App Setup](GitHub%20App%20Setup.md).
+
+| Setting | Default | Description |
+|---|---|---|
+| `AppId` | `0` | The GitHub App's App ID. |
+| `PrivateKeyPath` | *(empty)* | Path to the app's private key (`.pem`), relative to the app folder. In Docker: `secrets/github-app.pem`. **The file is a secret.** |
+| `Repository` | `Nikolai558/FE-BUDDY` | Where issues are created. Development uses `Nikolai558/FE-BUDDYBot-sandbox`. |
+| `ReleasesRepository` | `Nikolai558/FE-BUDDY` | Where the version dropdown's releases come from. Stays FE-BUDDY in development. |
+| `PollIntervalSeconds` | `120` | How often the bot checks GitHub for new issues. Checks where nothing changed don't count against GitHub's rate limit. |
+
 ### `GuildDefaults`
 Only used the **first time** the bot starts with an empty database. It seeds the server settings, looking up the role and channel names given here. After that, change settings with `/admin`; these values aren't read again.
 
@@ -65,6 +76,8 @@ Bot__DisconnectWebhookUrl=...
 Bot__Status=
 Heartbeat__Enabled=false
 Heartbeat__Url=...
+GitHub__AppId=...
+GitHub__PrivateKeyPath=secrets/github-app.pem
 ```
 
 After changing `bot.env`, recreate the container (see [Deployment](Deployment.md#common-commands)).
@@ -73,17 +86,20 @@ After changing `bot.env`, recreate the container (see [Deployment](Deployment.md
 ```
 cd FEBuddyDiscordBot
 dotnet user-secrets set "Bot:Token" "<development bot token>"
+dotnet user-secrets set "GitHub:AppId" "<app id>"
+dotnet user-secrets set "GitHub:PrivateKeyPath" "<full path to the .pem file>"
 ```
 
 Use the **development** bot's token. Running the production token locally would start a second copy of the live bot.
 
 ## Server settings database
-Server settings are stored in `data/febuddybot.db` (SQLite), one row per server. View and change them in Discord:
+Server settings are stored in `data/febuddybot.db` (SQLite), one row per server. The same file also holds which forum post belongs to which GitHub issue, and each member's issue submissions. View and change them in Discord:
 
 * `/admin settings`: show everything, with ⚠️ next to anything missing or deleted
 * `/admin events`: turn automatic behaviors on or off
 * `/admin roles`: choose the Verified, Staff and private meeting roles
 * `/admin channels`: choose the private meeting voice channel and the roles channel
+* `/admin issues`, `/admin dev-task-roles`: set up issue reporting (see [Discord Setup](Discord%20Setup.md#issue-reporting))
 
 Roles and channels are stored by ID, so renaming them in Discord doesn't break anything.
 

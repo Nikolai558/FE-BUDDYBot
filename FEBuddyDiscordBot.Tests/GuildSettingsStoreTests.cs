@@ -19,10 +19,11 @@ public sealed class GuildSettingsStoreTests : IDisposable
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), "febuddybot-tests-" + Guid.NewGuid().ToString("N"));
 
-    private GuildSettingsStore CreateStore(ulong guildId = 962547562341072896) => new(
-        Options.Create(new BotOptions { GuildId = guildId }),
-        new TestEnvironment(_root),
-        NullLogger<GuildSettingsStore>.Instance);
+    private GuildSettingsStore CreateStore(ulong guildId = 962547562341072896)
+    {
+        IOptions<BotOptions> options = Options.Create(new BotOptions { GuildId = guildId });
+        return new(new BotDatabase(options, new TestEnvironment(_root)), options, NullLogger<GuildSettingsStore>.Instance);
+    }
 
     [Fact]
     public async Task Empty_database_returns_disabled_settings()

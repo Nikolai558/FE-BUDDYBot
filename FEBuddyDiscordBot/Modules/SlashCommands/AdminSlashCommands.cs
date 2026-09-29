@@ -1,5 +1,6 @@
 using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Models;
+using FEBuddyDiscordBot.Services;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
 
@@ -14,11 +15,15 @@ namespace FEBuddyDiscordBot.Modules.SlashCommands;
 public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly GuildSettingsStore _settings;
+    private readonly GitHubApi _github;
+    private readonly IssueForumService _issueForum;
     private readonly ILogger<AdminSlashCommands> _logger;
 
-    public AdminSlashCommands(GuildSettingsStore settings, ILogger<AdminSlashCommands> logger)
+    public AdminSlashCommands(GuildSettingsStore settings, GitHubApi github, IssueForumService issueForum, ILogger<AdminSlashCommands> logger)
     {
         _settings = settings;
+        _github = github;
+        _issueForum = issueForum;
         _logger = logger;
     }
 
@@ -89,6 +94,137 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         await RespondAsync("Channels updated.", embed: BuildSettingsEmbed(updated), ephemeral: true);
     }
 
+    [SlashCommand("issues", "Set up GitHub issue reporting.")]
+    public async Task SetIssuesAsync(
+        [Summary("forum", "Forum channel with one post per GitHub issue"), ChannelTypes(ChannelType.Forum)] IForumChannel? forum = null,
+        [Summary("submit-channel", "Channel for the report-an-issue buttons"), ChannelTypes(ChannelType.Text)] ITextChannel? submitChannel = null,
+        [Summary("approval-channel", "Private channel where extra submissions wait for approval"), ChannelTypes(ChannelType.Text)] ITextChannel? approvalChannel = null,
+        [Summary("approver-role", "Role pinged to approve submissions (anyone with Manage Server can approve too)")] IRole? approverRole = null,
+        [Summary("per-hour", "Submissions a member may make per hour before the rest need approval"), MinValue(1), MaxValue(10)] int? perHour = null)
+    {
+        // Adding the forum's tags can take a moment.
+        await DeferAsync(ephemeral: true);
+
+        GuildSettings updated = await _settings.UpdateAsync(s =>
+        {
+            if (forum is not null) s.IssueForumChannelId = forum.Id;
+            if (submitChannel is not null) s.IssueSubmitChannelId = submitChannel.Id;
+            if (approvalChannel is not null) s.IssueApprovalChannelId = approvalChannel.Id;
+            if (approverRole is not null) s.IssueApproverRoleId = approverRole.Id;
+            if (perHour is int limit) s.IssueSubmissionsPerHour = limit;
+        });
+
+        _logger.LogInformation("Config: issue settings updated by {User}", Context.User.Username);
+
+        List<string> warnings = IssueSetupProblems(updated);
+        if (forum is not null && _issueForum.Forum is { } forumChannel)
+        {
+            if (await _issueForum.EnsureTagsAsync(forumChannel) is string tagProblem) warnings.Add(tagProblem);
+
+            // Mirror every open issue into the (possibly new) forum on the next GitHub check.
+            _github.ForgetOpenIssuesETag();
+        }
+
+        string message = warnings.Count == 0 ? "Issue settings updated." : "Issue settings updated, but:\n" + string.Join("\n", warnings.Select(w => $"⚠️ {w}"));
+        await FollowupAsync(message, embed: BuildSettingsEmbed(updated), ephemeral: true);
+    }
+
+    [SlashCommand("dev-task-roles", "Choose which roles can submit development tasks.")]
+    public async Task ChooseDevTaskRolesAsync()
+    {
+        SelectMenuBuilder menu = new SelectMenuBuilder()
+            .WithCustomId("admin-dev-task-roles")
+            .WithType(ComponentType.RoleSelect)
+            .WithPlaceholder("Roles that can submit development tasks")
+            .WithMinValues(0)
+            .WithMaxValues(10)
+            .WithDefaultValues((_settings.Current.DevTaskRoleIds ?? []).Select(id => new SelectMenuDefaultValue(id, SelectDefaultValueType.Role)).ToArray());
+
+        await RespondAsync("Pick the roles that can submit development tasks. Members with Manage Server always can.",
+            components: new ComponentBuilder().WithSelectMenu(menu).Build(), ephemeral: true);
+    }
+
+    [ComponentInteraction("admin-dev-task-roles", ignoreGroupNames: true)]
+    public async Task SetDevTaskRolesAsync(IRole[] roles)
+    {
+        GuildSettings updated = await _settings.UpdateAsync(s => s.DevTaskRoleIds = roles.Select(r => r.Id).ToArray());
+        _logger.LogInformation("Config: dev-task roles updated by {User}", Context.User.Username);
+
+        await ((SocketMessageComponent)Context.Interaction).UpdateAsync(m =>
+        {
+            m.Content = roles.Length == 0
+                ? "Dev-task roles cleared. Only members with Manage Server can submit development tasks."
+                : "Dev-task roles: " + string.Join(" ", roles.Select(r => r.Mention));
+            m.Components = new ComponentBuilder().Build();
+            m.Embed = BuildSettingsEmbed(updated);
+        });
+    }
+
+    [SlashCommand("issue-panel", "Post the report-an-issue buttons in the submit channel.")]
+    public async Task PostIssuePanelAsync()
+    {
+        if (_settings.Current.IssueSubmitChannelId is not ulong channelId || Context.Guild.GetTextChannel(channelId) is not { } channel)
+        {
+            await RespondAsync("Set the submit channel first with `/admin issues submit-channel:`.", ephemeral: true);
+            return;
+        }
+
+        if (!Context.Guild.CurrentUser.GetPermissions(channel).SendMessages)
+        {
+            await RespondAsync($"I can't send messages in {channel.Mention}.", ephemeral: true);
+            return;
+        }
+
+        await channel.SendMessageAsync(embed: IssueInteractionHandler.PanelEmbed(), components: IssueInteractionHandler.PanelButtons());
+        _logger.LogInformation("Config: issue panel posted in #{Channel} by {User}", channel.Name, Context.User.Username);
+        await RespondAsync($"Posted the buttons in {channel.Mention}. Delete any older copy of them there.", ephemeral: true);
+    }
+
+    /// <summary>Anything missing for issue reporting to work: GitHub App, channels, and the bot's permissions in them.</summary>
+    private List<string> IssueSetupProblems(GuildSettings s)
+    {
+        List<string> problems = [];
+        if (!_github.IsConfigured) problems.Add("The GitHub App isn't configured on the server (GitHub:AppId and GitHub:PrivateKeyPath).");
+
+        SocketGuildUser me = Context.Guild.CurrentUser;
+
+        void Check(ulong? channelId, string what, params (ChannelPermission Permission, string Name)[] needed)
+        {
+            if (channelId is not ulong id || Context.Guild.GetChannel(id) is not { } channel) return;
+            ChannelPermissions has = me.GetPermissions(channel);
+            string[] missing = needed.Where(n => !has.Has(n.Permission)).Select(n => n.Name).ToArray();
+            if (missing.Length > 0) problems.Add($"In the {what} <#{id}> I'm missing: {string.Join(", ", missing)}.");
+        }
+
+        Check(s.IssueForumChannelId, "forum",
+            (ChannelPermission.ViewChannel, "View Channel"),
+            (ChannelPermission.SendMessages, "Create Posts"),
+            (ChannelPermission.SendMessagesInThreads, "Send Messages in Posts"),
+            (ChannelPermission.ManageThreads, "Manage Posts"),
+            (ChannelPermission.EmbedLinks, "Embed Links"),
+            (ChannelPermission.AttachFiles, "Attach Files"),
+            (ChannelPermission.ReadMessageHistory, "Read Message History"));
+        Check(s.IssueSubmitChannelId, "submit channel",
+            (ChannelPermission.ViewChannel, "View Channel"),
+            (ChannelPermission.SendMessages, "Send Messages"),
+            (ChannelPermission.EmbedLinks, "Embed Links"));
+        Check(s.IssueApprovalChannelId, "approval channel",
+            (ChannelPermission.ViewChannel, "View Channel"),
+            (ChannelPermission.SendMessages, "Send Messages"),
+            (ChannelPermission.EmbedLinks, "Embed Links"),
+            (ChannelPermission.AttachFiles, "Attach Files"),
+            (ChannelPermission.ReadMessageHistory, "Read Message History"));
+
+        if (s.IssueApproverRoleId is ulong roleId && Context.Guild.GetRole(roleId) is { IsMentionable: false } role
+            && s.IssueApprovalChannelId is ulong approvalId && Context.Guild.GetChannel(approvalId) is { } approval
+            && !me.GetPermissions(approval).MentionEveryone)
+        {
+            problems.Add($"I can't ping {role.Mention}: make it mentionable, or give me **Mention @everyone, @here, and All Roles** in <#{approvalId}>.");
+        }
+
+        return problems;
+    }
+
     /// <summary>Returns why the bot can't assign this role, or null if it can.</summary>
     private string? CantAssign(IRole role)
     {
@@ -127,7 +263,15 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
             .AddField("Channels",
                 $"Private meeting voice: {Channel(s.PrivateMeetingChannelId)}\n" +
                 $"Roles channel: {Channel(s.RolesChannelId)}")
-            .WithFooter("Change with /admin events, /admin roles, /admin channels")
+            .AddField("GitHub issues",
+                $"GitHub: {(_github.IsConfigured ? $"✅ {_github.Repository}" : "⚠️ GitHub App not configured")}\n" +
+                $"Forum: {Channel(s.IssueForumChannelId)}\n" +
+                $"Submit channel: {Channel(s.IssueSubmitChannelId)}\n" +
+                $"Approval channel: {Channel(s.IssueApprovalChannelId)}\n" +
+                $"Approver role: {Role(s.IssueApproverRoleId)}\n" +
+                $"Dev-task roles: {(s.DevTaskRoleIds is { Length: > 0 } ids ? string.Join(" ", ids.Select(id => Role(id))) : "⚠️ not set")}\n" +
+                $"Submissions per hour before approval: {s.IssueSubmissionsPerHour}")
+            .WithFooter("Change with /admin events, roles, channels, issues, dev-task-roles")
             .Build();
     }
 }

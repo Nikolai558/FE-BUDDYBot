@@ -20,4 +20,21 @@ If your account isn't linked, the bot tells you how to link it at https://vatusa
 * None. Anyone in the server can use it.
 * In FE-Buddy it can only be used in **#assign-my-roles** (see [Discord Setup](../Discord%20Setup.md#command-permissions)).
 
+
+## Report
+`/report type:<Bug report | Feature request | Documentation problem | Development task>`
+
+Reports an FE-BUDDY issue. It does the same as the buttons in **#submit-an-issue**:
+1. A form asks for a title and the first questions from the matching [GitHub issue template](https://github.com/Nikolai558/FE-BUDDY/tree/v3-development/.github/ISSUE_TEMPLATE).
+2. The bot shows existing issues that look similar. If one of them is yours, add a 👍 or a reply there instead. You also choose whether the GitHub issue names you by your Discord username or your Discord user ID.
+3. **Continue** opens a second form for the rest of the questions and any files (logs, screenshots).
+
+The bot then creates the GitHub issue and a post for it in the issues forum. Small `.log` and `.txt` files are pasted into the issue, with anything that looks like a GitHub token blanked out. Other files stay on Discord, and the issue links to them.
+
+If you've already submitted one in the last hour, the next one goes to the admins for approval first, and you get a DM when it's handled.
+
+**Permission Requirements**
+* The **Verified** role (run `/give-role` first). **Development task** also needs a dev-task role (see [`/admin dev-task-roles`](Admin%20User%20Commands.md#dev-task-roles)).
+* In FE-Buddy it can only be used in **#submit-an-issue**.
+
 ---

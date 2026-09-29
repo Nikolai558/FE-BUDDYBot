@@ -20,4 +20,24 @@ public sealed record GuildSettings
     public ulong? PrivateMeetingRoleId { get; set; }
     public ulong? PrivateMeetingChannelId { get; set; }
     public ulong? RolesChannelId { get; set; }
+
+    // GitHub issues (see Docs/GitHub Issue Sync.md)
+
+    /// <summary>Forum channel with one post per open FE-BUDDY issue.</summary>
+    public ulong? IssueForumChannelId { get; set; }
+
+    /// <summary>Channel with the "report an issue" buttons.</summary>
+    public ulong? IssueSubmitChannelId { get; set; }
+
+    /// <summary>Private channel where submissions over the hourly limit wait for approval.</summary>
+    public ulong? IssueApprovalChannelId { get; set; }
+
+    /// <summary>Role pinged for approvals. Members with it can also approve, as can anyone with Manage Server.</summary>
+    public ulong? IssueApproverRoleId { get; set; }
+
+    /// <summary>Roles allowed to submit development tasks.</summary>
+    public ulong[]? DevTaskRoleIds { get; set; }
+
+    /// <summary>Submissions a member may make per hour before the rest need approval.</summary>
+    public int IssueSubmissionsPerHour { get; set; } = 1;
 }
