@@ -15,6 +15,7 @@ public sealed class IssueTemplatesTests
 
         Assert.True(template.Page(1).Count() + 1 <= 5, "Page 1 (plus the title) has too many questions");
         Assert.True(template.Page(2).Count() <= 5, "Page 2 has too many questions");
+        Assert.True(template.Page(2).Any(), "Page 2 is empty, and Discord won't open an empty modal");
         Assert.All(template.Fields, f => Assert.InRange(f.Page, 1, 2));
     }
 
@@ -34,7 +35,7 @@ public sealed class IssueTemplatesTests
             Assert.True((field.Placeholder?.Length ?? 0) <= 100, $"{field.Id}: placeholder too long");
             Assert.NotEqual("title", field.Id);
 
-            if (field.Input is FieldInput.Select or FieldInput.MultiSelect or FieldInput.Radio or FieldInput.Confirm && !field.LiveReleases)
+            if (field.Input is FieldInput.Select or FieldInput.MultiSelect or FieldInput.Radio or FieldInput.Confirm)
             {
                 Assert.NotNull(field.Options);
                 Assert.InRange(field.Options!.Count, 1, 25);

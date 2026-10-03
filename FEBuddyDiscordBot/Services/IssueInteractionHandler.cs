@@ -15,7 +15,6 @@ namespace FEBuddyDiscordBot.Services;
 public sealed class IssueInteractionHandler
 {
     private const string Prefix = "issue:";
-    private const string OtherVersion = "Other / not listed";
 
     private readonly IssueSubmissionService _submissions;
     private readonly IssueStore _store;
@@ -105,8 +104,7 @@ public sealed class IssueInteractionHandler
             return;
         }
 
-        IReadOnlyList<string>? versions = template.Fields.Any(f => f.LiveReleases) ? await _submissions.GetVersionsAsync() : null;
-        await interaction.RespondWithModalAsync(BuildModal(template, 1, versions));
+        await interaction.RespondWithModalAsync(BuildModal(template, 1));
     }
 
     // ---- Routing ----
@@ -227,7 +225,7 @@ public sealed class IssueInteractionHandler
             return;
         }
 
-        await component.RespondWithModalAsync(BuildModal(draft.Template, 2, versions: null));
+        await component.RespondWithModalAsync(BuildModal(draft.Template, 2));
     }
 
     /// <summary>Step 3: submit.</summary>
@@ -294,7 +292,7 @@ public sealed class IssueInteractionHandler
 
     // ---- Modals ----
 
-    private static Modal BuildModal(IssueTemplate template, int page, IReadOnlyList<string>? versions)
+    private static Modal BuildModal(IssueTemplate template, int page)
     {
         ModalBuilder modal = new ModalBuilder()
             .WithTitle($"{template.Name} ({page}/2)")
@@ -310,28 +308,23 @@ public sealed class IssueInteractionHandler
 
         foreach (IssueField field in template.Page(page))
         {
-            modal.AddLabel(field.Label, BuildInput(field, versions), field.Description);
+            modal.AddLabel(field.Label, BuildInput(field), field.Description);
         }
 
         return modal.Build();
     }
 
-    private static IMessageComponentBuilder BuildInput(IssueField field, IReadOnlyList<string>? versions)
+    private static IMessageComponentBuilder BuildInput(IssueField field)
     {
         switch (field.Input)
         {
-            case FieldInput.Select when field.LiveReleases && versions is null:
-                return new TextInputBuilder().WithCustomId(field.Id).WithStyle(TextInputStyle.Short).WithMaxLength(50)
-                    .WithRequired(field.Required).WithPlaceholder("e.g. 3.0.0-alpha.2");
-
             case FieldInput.Select:
             case FieldInput.MultiSelect:
-                IEnumerable<string> choices = field.LiveReleases ? versions!.Take(24).Append(OtherVersion) : field.Options!;
                 SelectMenuBuilder select = new SelectMenuBuilder()
                     .WithCustomId(field.Id)
                     .WithRequired(field.Required)
                     .WithMinValues(field.Required ? 1 : 0);
-                foreach (string choice in choices) select.AddOption(choice, choice);
+                foreach (string choice in field.Options!) select.AddOption(choice, choice);
                 return select.WithMaxValues(field.Input == FieldInput.MultiSelect ? select.Options.Count : 1);
 
             case FieldInput.Radio:

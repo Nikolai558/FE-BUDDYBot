@@ -24,7 +24,6 @@ You do this once. It takes about 10 minutes.
    | Permission | Access |
    |---|---|
    | **Issues** | Read and write |
-   | **Contents** | Read-only (to list FE-BUDDY's releases for the version dropdown) |
    | **Metadata** | Read-only (GitHub sets this automatically) |
 
    Leave **Organization** and **Account permissions** at No access.

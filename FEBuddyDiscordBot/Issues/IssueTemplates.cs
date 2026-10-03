@@ -44,11 +44,11 @@ public enum FieldInput
 /// </summary>
 /// <param name="Id">The template field's id; also the modal component's custom id.</param>
 /// <param name="Heading">The field's label in the GitHub template; becomes the "### Heading" in the issue body.</param>
-/// <param name="Page">Which modal it's asked in: 1 (with the title, before the duplicate check) or 2.</param>
+/// <param name="Page">Which modal it's asked in: 1 (with the title, before the duplicate check) or 2.
+/// Each template asks its main question on page 1, and needs at least one question on page 2.</param>
 /// <param name="ModalLabel">Label shown in Discord (max 45 characters). Defaults to <paramref name="Heading"/>.</param>
 /// <param name="Description">Help text under the label (max 100 characters).</param>
 /// <param name="Options">Choices for Select, MultiSelect, Radio and Confirm.</param>
-/// <param name="LiveReleases">Fill the choices with FE-BUDDY's latest GitHub releases.</param>
 public sealed record IssueField(
     string Id,
     string Heading,
@@ -58,8 +58,7 @@ public sealed record IssueField(
     string? ModalLabel = null,
     string? Description = null,
     string? Placeholder = null,
-    IReadOnlyList<string>? Options = null,
-    bool LiveReleases = false)
+    IReadOnlyList<string>? Options = null)
 {
     public string Label => ModalLabel ?? Heading;
 }
@@ -90,46 +89,16 @@ public sealed record IssueTemplate(
     [
         new(IssueKind.Bug, "Bug report", "🐛", "[BUG] - ", ["bug", "v3.x"],
         [
-            new("version", "FE-BUDDY version", 1, FieldInput.Select, Required: true,
-                Description: "Shown in the version chip at the top of the FE-BUDDY window.", LiveReleases: true),
-            new("windows", "Windows version", 1, FieldInput.Radio, Required: true,
-                Options: ["Windows 11", "Windows 10", "Other"]),
-            new("area", "Where in FE-BUDDY?", 1, FieldInput.MultiSelect, Required: true,
-                Description: "Pick every part of the app involved.",
-                Options:
-                [
-                    "Dashboard",
-                    "AIRAC Service - General / running the service",
-                    "AIRAC Service - Airports",
-                    "AIRAC Service - Airways",
-                    "AIRAC Service - Arrivals",
-                    "AIRAC Service - ARTCC Boundaries",
-                    "AIRAC Service - Departures",
-                    "AIRAC Service - Fixes",
-                    "AIRAC Service - NAVAIDs",
-                    "AIRAC Service - Procedures",
-                    "AIRAC Service - Telephony",
-                    "AIRAC Service - Wx Stations",
-                    "AIRAC Service - vNAS Alias Upload",
-                    "AIRAC Service - File Names",
-                    "File Conversions - DAT to GeoJSON",
-                    "File Conversions - SCT2 to GeoJSON",
-                    "File Conversions - ERAM to GeoJSON",
-                    "Map",
-                    "Settings",
-                    "Updating or installing",
-                    "Other / not sure",
-                ]),
-            new("airac", "AIRAC cycle and facility", 1, FieldInput.Short,
-                Description: "If it happened while working with AIRAC data: which cycle and which ARTCC?",
-                Placeholder: "e.g. 2610, ZLC"),
-            new("what-happened", "What happened?", 2, FieldInput.Paragraph, Required: true,
-                Description: "Include the exact text of any error message."),
-            new("steps", "Steps to reproduce", 2, FieldInput.Paragraph, Required: true,
+            new("what-happened", "What went wrong?", 1, FieldInput.Paragraph, Required: true,
+                Description: "What happened, and what you expected instead. Include the exact text of any error.",
+                Placeholder: "e.g. I ran the AIRAC Service for ZLC with Airways on. V21 is missing from the airway file."),
+            new("steps", "Steps to reproduce (optional)", 2, FieldInput.Paragraph,
+                ModalLabel: "Steps to reproduce",
+                Description: "If you remember what you clicked, list it here so we can make it happen too.",
                 Placeholder: "1. Open AIRAC Service > Airways\n2. Turn on ...\n3. Click Run AIRAC Service"),
-            new("expected", "What did you expect to happen?", 2, FieldInput.Paragraph, Required: true),
-            new("attachments", "Log, screenshots, and files", 2, FieldInput.Files,
-                Description: @"Log: %APPDATA%\FE-Buddy\Logs\FE-Buddy_<date>.log. Screenshots and input files help too."),
+            new("attachments", "Log, screenshots, and files (optional)", 2, FieldInput.Files,
+                ModalLabel: "Log, screenshots, and files",
+                Description: @"Log: %APPDATA%\FE-Buddy\Logs\FE-Buddy_<date>.log. Crash on launch: also febuddy-wpf-crash.txt."),
             new("checks", "Before you submit", 2, FieldInput.Confirm, Required: true,
                 ModalLabel: "Nothing private attached",
                 Options: ["Nothing I've attached contains a GitHub token, password, or other private information."]),
@@ -137,57 +106,32 @@ public sealed record IssueTemplate(
 
         new(IssueKind.Feature, "Feature request", "✨", "[FEAT REQ.] - ", ["feature", "v3.x"],
         [
-            new("problem", "What problem would this solve?", 1, FieldInput.Paragraph, Required: true,
-                Description: "What are you trying to do, and what makes it hard or slow today?"),
-            new("solution", "What would you like FE-BUDDY to do?", 2, FieldInput.Paragraph, Required: true,
-                ModalLabel: "What should FE-BUDDY do?",
-                Description: "Describe how it would work. Mock-ups or example output help a lot."),
-            new("area", "Which part of FE-BUDDY?", 1, FieldInput.MultiSelect,
-                Options: ["Dashboard", "AIRAC Service (any sub-service)", "File Conversions", "Map", "Settings", "Updating or installing", "Something new", "Not sure"]),
-            new("who", "Who would use it?", 2, FieldInput.Short,
-                Description: "Your role and facility help us understand how widely it applies.",
-                Placeholder: "e.g. Facility engineer at ZLC, for CRC video maps"),
-            new("alternatives", "How do you handle it today?", 2, FieldInput.Paragraph,
-                Description: "Workarounds, other tools, or other approaches you've considered."),
-            new("context", "Anything else?", 2, FieldInput.Paragraph,
-                Description: "Links, or FAA or vNAS references."),
-            new("attachments", "Screenshots and example files", 2, FieldInput.Files),
+            new("request", "What would you like FE-BUDDY to do?", 1, FieldInput.Paragraph, Required: true,
+                Description: "Plain words are perfect. If you can, say what it would fix or save you today.",
+                Placeholder: "e.g. Let me pick which airways the AIRAC Service leaves out of the airway files."),
+            new("attachments", "Examples or attachments (optional)", 2, FieldInput.Files,
+                ModalLabel: "Examples or attachments",
+                Description: "Screenshots, sketches, or example files. Links can go in the forum post."),
         ]),
 
         new(IssueKind.Docs, "Documentation problem", "📄", "[DOCS] - ", ["docs", "v3.x"],
         [
-            new("where", "Where is it?", 1, FieldInput.MultiSelect, Required: true,
-                Options:
-                [
-                    "User Guide",
-                    "FAQ and troubleshooting",
-                    "Getting started",
-                    "GitHub token guide",
-                    "Glossary",
-                    "Text inside the app (tooltips, messages, descriptions)",
-                    "Developer docs",
-                    "Other",
-                ]),
-            new("location", "Link or location", 1, FieldInput.Short,
-                Description: "A link to the page and section, or where it appears in the app.",
-                Placeholder: "e.g. User Guide > Airways"),
-            new("problem", "What's wrong or missing?", 2, FieldInput.Paragraph, Required: true),
-            new("suggestion", "Suggested fix", 2, FieldInput.Paragraph,
-                Description: "What it should say instead, if you know."),
+            new("problem", "What's wrong or missing, and where?", 1, FieldInput.Paragraph, Required: true,
+                Description: "A link to the page, or where you saw it in the app, helps us find it.",
+                Placeholder: "e.g. User Guide > Airways says the output goes to the Airways folder, but it goes to ..."),
+            new("suggestion", "Suggested fix (optional)", 2, FieldInput.Paragraph,
+                ModalLabel: "Suggested fix",
+                Description: "What it should say instead, if you know.",
+                Placeholder: "e.g. Change it to \"Output is saved to ...\""),
         ]),
 
         new(IssueKind.Task, "Development task", "🔧", "[TASK] - ", ["task", "v3.x"],
         [
-            new("kind", "Kind of work", 1, FieldInput.MultiSelect, Required: true,
+            new("kind", "Kind of work", 2, FieldInput.MultiSelect, Required: true,
                 Options: ["UI (views, cards, styles)", "Logic (FeBuddy.Core)", "Installer or updater", "Build, CI, or release", "Tests", "Cleanup or refactor"]),
             new("description", "What needs to be done, and why?", 1, FieldInput.Paragraph, Required: true,
-                ModalLabel: "What needs to be done, and why?"),
-            new("steps", "Steps", 2, FieldInput.Paragraph,
-                Description: "The pieces of work needed to finish this.", Placeholder: "1.\n2.\n3."),
-            new("tests", "Tests needed", 2, FieldInput.Paragraph,
-                Description: "For logic changes, the tests needed to keep FeBuddy.Core's coverage up."),
-            new("references", "References", 2, FieldInput.Paragraph,
-                Description: "Related issues, files, docs, or FAA and vNAS references."),
+                Description: "What to add, rework, or remove, and why. Steps, tests needed and references help.",
+                Placeholder: "Steps:\n1.\n2.\n\nTests needed:\n\nReferences:"),
         ], RestrictedToDevTaskRoles: true),
     ];
 }

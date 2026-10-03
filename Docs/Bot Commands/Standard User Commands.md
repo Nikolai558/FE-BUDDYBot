@@ -25,7 +25,7 @@ If your account isn't linked, the bot tells you how to link it at https://vatusa
 `/report type:<Bug report | Feature request | Documentation problem | Development task>`
 
 Reports an FE-BUDDY issue. It does the same as the buttons in **#submit-an-issue**:
-1. A form asks for a title and the first questions from the matching [GitHub issue template](https://github.com/Nikolai558/FE-BUDDY/tree/v3-development/.github/ISSUE_TEMPLATE).
+1. A form asks for a title and the main question from the matching [GitHub issue template](https://github.com/Nikolai558/FE-BUDDY/tree/v3-development/.github/ISSUE_TEMPLATE).
 2. The bot shows existing issues that look similar. If one of them is yours, add a 👍 or a reply there instead. You also choose how the GitHub issue names you: your Discord username, your Discord user ID, or (after `/link-github`) your GitHub account, which gets you GitHub notifications for the issue.
 3. **Continue** opens a second form for the rest of the questions and any files (logs, screenshots).
 
