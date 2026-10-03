@@ -12,13 +12,8 @@ public sealed class IssueTextTests
         Title = "Airways crash",
         Values =
         {
-            ["version"] = "3.0.0-alpha.2",
-            ["windows"] = "Windows 11",
-            ["area"] = "AIRAC Service - Airways, Map",
-            ["airac"] = "",
             ["what-happened"] = "It crashed.",
-            ["steps"] = "1. Run it",
-            ["expected"] = "No crash",
+            ["steps"] = "",
         },
     };
 
@@ -30,9 +25,9 @@ public sealed class IssueTextTests
         string[] headings = body.Split('\n').Where(l => l.StartsWith("### ")).ToArray();
         Assert.Equal(IssueTemplate.For(IssueKind.Bug).Fields.Select(f => "### " + f.Heading), headings);
 
-        Assert.Contains("### FE-BUDDY version\n\n3.0.0-alpha.2\n", body);
-        Assert.Contains("### AIRAC cycle and facility\n\n_No response_\n", body);
-        Assert.Contains("### Log, screenshots, and files\n\n_No response_\n", body);
+        Assert.Contains("### What went wrong?\n\nIt crashed.\n", body);
+        Assert.Contains("### Steps to reproduce (optional)\n\n_No response_\n", body);
+        Assert.Contains("### Log, screenshots, and files (optional)\n\n_No response_\n", body);
         Assert.Contains("- [X] " + IssueTemplate.SearchedConfirmation, body);
         Assert.Contains("- [X] Nothing I've attached contains", body);
     }
@@ -129,7 +124,7 @@ public sealed class IssueTextTests
         IssueDraft draft = BugDraft();
         draft.Values["what-happened"] = "@someone broke it";
 
-        Assert.Contains("### What happened?\n\n@​someone broke it\n", IssueText.BuildBody(draft, null));
+        Assert.Contains("### What went wrong?\n\n@​someone broke it\n", IssueText.BuildBody(draft, null));
     }
 
     [Fact]

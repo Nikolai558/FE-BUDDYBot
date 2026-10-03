@@ -31,7 +31,6 @@ public sealed class IssueSubmissionService
     private const int MaxCopiedFileBytes = 10 * 1024 * 1024;
 
     private static readonly TimeSpan DraftLifetime = TimeSpan.FromHours(1);
-    private static readonly TimeSpan ReleaseCacheLifetime = TimeSpan.FromMinutes(10);
 
     private readonly GuildSettingsStore _settings;
     private readonly IssueStore _store;
@@ -41,8 +40,6 @@ public sealed class IssueSubmissionService
     private readonly ILogger<IssueSubmissionService> _logger;
 
     private readonly ConcurrentDictionary<ulong, IssueDraft> _drafts = new();
-    private (DateTimeOffset Fetched, IReadOnlyList<string> Versions)? _releases;
-    private DateTimeOffset _releasesRetryAfter;
 
     public IssueSubmissionService(
         GuildSettingsStore settings,
@@ -112,36 +109,6 @@ public sealed class IssueSubmissionService
         {
             _logger.LogWarning("Issues: duplicate search failed: {Error}", ex.Message);
             return [];
-        }
-    }
-
-    /// <summary>
-    /// FE-BUDDY's latest release versions for the version dropdown, or null if they aren't available.
-    /// Discord only waits 3 seconds for the modal, so this never waits long: after a failure it doesn't
-    /// ask GitHub again for a minute. The background sync keeps the list fresh.
-    /// </summary>
-    /// <param name="timeout">How long to wait for GitHub; the 1.5-second default suits opening a form.</param>
-    public async Task<IReadOnlyList<string>?> GetVersionsAsync(TimeSpan? timeout = null)
-    {
-        DateTimeOffset now = DateTimeOffset.UtcNow;
-        if (_releases is { } cached && now - cached.Fetched < ReleaseCacheLifetime) return cached.Versions;
-        if (now < _releasesRetryAfter) return _releases?.Versions;
-
-        try
-        {
-            using CancellationTokenSource cancel = new(timeout ?? TimeSpan.FromSeconds(1.5));
-            IReadOnlyList<GitHubRelease> releases = await _github.ListReleasesAsync(20, cancel.Token);
-            if (releases.Count == 0) return null;
-
-            List<string> versions = releases.Select(r => r.TagName.TrimStart('v', 'V')).ToList();
-            _releases = (now, versions);
-            return versions;
-        }
-        catch (Exception ex) when (ex is GitHubException or OperationCanceledException)
-        {
-            _releasesRetryAfter = now.AddMinutes(1);
-            _logger.LogWarning("Issues: couldn't load FE-BUDDY releases: {Error}", ex.Message);
-            return _releases?.Versions;
         }
     }
 

@@ -14,7 +14,6 @@ public sealed class IssueSyncService : BackgroundService
     private readonly DiscordSocketClient _discord;
     private readonly GitHubApi _github;
     private readonly IssueForumService _forum;
-    private readonly IssueSubmissionService _submissions;
     private readonly IssueStore _store;
     private readonly GitHubOptions _options;
     private readonly ILogger<IssueSyncService> _logger;
@@ -23,7 +22,6 @@ public sealed class IssueSyncService : BackgroundService
         DiscordSocketClient discord,
         GitHubApi github,
         IssueForumService forum,
-        IssueSubmissionService submissions,
         IssueStore store,
         IOptions<GitHubOptions> options,
         ILogger<IssueSyncService> logger)
@@ -31,7 +29,6 @@ public sealed class IssueSyncService : BackgroundService
         _discord = discord;
         _github = github;
         _forum = forum;
-        _submissions = submissions;
         _store = store;
         _options = options.Value;
         _logger = logger;
@@ -67,9 +64,6 @@ public sealed class IssueSyncService : BackgroundService
     private async Task SyncAsync(CancellationToken cancellationToken)
     {
         DateTimeOffset started = DateTimeOffset.UtcNow;
-
-        // Keep the release list for the version dropdown fresh, so opening the form never waits on GitHub.
-        await _submissions.GetVersionsAsync(timeout: TimeSpan.FromSeconds(15));
 
         // New open issues get posts. Oldest first, so the forum's newest posts are the newest issues.
         if (await _github.ListOpenIssuesIfChangedAsync(cancellationToken) is { } open)

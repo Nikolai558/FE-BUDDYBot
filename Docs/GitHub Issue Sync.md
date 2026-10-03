@@ -35,7 +35,7 @@ When more than 5 apply, keep in order: type → closed/status → priority → v
 ## GitHub App
 
 - New GitHub App ([GitHub App Setup](GitHub%20App%20Setup.md)), installed on `Nikolai558/FE-BUDDY` and a private `FE-BUDDYBot-sandbox` repo for development.
-- Permissions: **Issues: read & write**, Contents: read (release list for the version dropdown), Metadata: read. Nothing else.
+- Permissions: **Issues: read & write**, Metadata: read. Nothing else.
 - Device flow enabled (for `/link-github`).
 - `bot.env` holds the App ID; the private key is a file mounted from `./secrets`. The bot looks up the installation itself.
 - Issues and comments appear as `<app-name>[bot]`.
@@ -44,10 +44,10 @@ When more than 5 apply, keep in order: type → closed/status → priority → v
 
 1. User clicks **[Report a bug] / [Request a feature] / [Docs problem] / [Dev task]** (or `/report`).
 2. Gate: must have **Verified**. **Dev task** also requires Contributor, Project Management, or Admin.
-3. **Modal 1** (Discord allows 5 questions per modal): title plus the template's first questions, using dropdowns, radio buttons and text boxes. FE-BUDDY version is a dropdown of recent GitHub releases + "Other / not listed".
+3. **Modal 1** (Discord allows 5 questions per modal): title plus the template's main question (the one required box; for dev tasks, the description).
 4. **Duplicate check**: search issues by the title's keywords and show the 5 closest matches, linking to their forum posts. If one matches, the member is asked to 👍 or reply there.
 5. Credit choice (dropdown on the same message): Discord username or Discord ID (verified GitHub @username once linked, Stage 3). Free-typed names are never accepted.
-6. **Continue** opens **modal 2**: the remaining questions, file upload, and (bugs) the required "nothing private attached" checkbox.
+6. **Continue** opens **modal 2**: the optional questions, file upload, (bugs) the required "nothing private attached" checkbox, and (dev tasks) the kind of work.
 7. Rate check (below), then create the GitHub issue with the template's title prefix, labels, and body layout (plus "Submitted from Discord by … · link to post"), create the forum post, and reply to the user with both links.
 
 ## Approval queue
