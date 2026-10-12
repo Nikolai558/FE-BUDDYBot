@@ -36,4 +36,20 @@ In FE-Buddy it can be used in **#feb-helper**, **#owner-chat** and **#admin-chat
 Roles: someone (123…) VATUSA CID 1234567 ZLC | added: none | removed: ARTCC STAFF | kept: Verified | nickname: unchanged
 ```
 
+## Clear Messages
+`/clear-messages amount:<1-100 | all> [keep-pinned]`
+
+Deletes messages in the channel or thread you run it in.
+* A number (1 to 100) deletes that many of the latest messages.
+* `all` deletes every message in the channel. The bot asks you to confirm first, with **Delete all messages** and **Cancel** buttons.
+* `keep-pinned` (default True) leaves pinned messages alone. With a number, pinned messages among the latest ones are skipped, not replaced, so fewer may be deleted. Set it to False to delete pinned messages too.
+
+The reply (only visible to you) says how many were deleted. Discord only deletes messages under 14 days old in bulk. Older ones are deleted one at a time, so clearing a long history with `all` can take a while. The reply shows progress. If it takes more than 15 minutes, the result is sent to you as a direct message. Only one clear can run in a channel at a time.
+
+It refuses to run in issue posts, because deleting replies there deletes their comments on GitHub too.
+
+**Permission Requirements**
+* `Manage Messages`
+* The bot needs **View Channel**, **Read Message History** and **Manage Messages** in the channel (see [Discord Setup](../Discord%20Setup.md#bot-role)). It tells you if one is missing.
+
 ---

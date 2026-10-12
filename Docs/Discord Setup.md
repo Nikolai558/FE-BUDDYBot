@@ -27,6 +27,7 @@ The bot's role (**Buddy Helper** in FE-Buddy) needs:
 * **View Channels**
 * **Manage Roles**: to give and remove the Verified, ARTCC Staff, private meeting and AIRAC pings roles
 * **Manage Nicknames**: to set nicknames
+* **Manage Messages** and **Read Message History**, for `/clear-messages`, only in the channels where staff will use it. Give these as channel permissions (Edit Channel → Permissions), not on the bot's role, so the bot can't delete messages anywhere else.
 
 It does **not** need Administrator; leave that off. The bot also doesn't need to see any particular channel. Slash commands work in channels the bot can't see, and it still gets voice join events for private voice channels.
 
