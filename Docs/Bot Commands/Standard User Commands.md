@@ -5,6 +5,7 @@
 Checks your account on the [VATUSA](https://www.vatusa.net/) website. If your Discord account is linked there, the bot gives you:
 * The **Verified** role
 * The **ARTCC Staff** role, if VATUSA lists you as ATM, DATM, TA, EC, FE or WM at a facility. VATUSA records assistants (AEC, AFE, AWM) under the same codes, so they get it too.
+* The **AIRAC pings** role (**NextAiracNotifications** in FE-Buddy), unless you've turned the pings off with [`/airac-pings`](#airac-pings)
 
 It also sets your **nickname** to `{First Name} {Last Name} | {ARTCC}`:
 * If your nickname already has a `|`, everything before it is kept and only the ARTCC after it is updated. For example, `Nik | ZOB` becomes `Nik | ZLC`.
@@ -21,13 +22,27 @@ If your account isn't linked, the bot tells you how to link it at https://vatusa
 * In FE-Buddy it can only be used in **#assign-my-roles** (see [Discord Setup](../Discord%20Setup.md#command-permissions)).
 
 
+## AIRAC Pings
+`/airac-pings turn:<On | Off>`
+
+When the FAA publishes the next AIRAC cycle's d-TPP MetaFile, the bot pings the AIRAC pings role so you know you can run FE-Buddy for a full AIRAC export (see [Automatic Events](Discord%20Event%20Commands.md#next-airac-metafile-ping)). Verified members get the role automatically.
+
+* **Off** removes the role, and the bot remembers it: `/give-role`, joining voice and `/staff check-users` won't give it back. The **Stop these pings** button under each ping does the same.
+* **On** gives the role back. You need the Verified role.
+
+**Permission Requirements**
+* None for **Off**. **On** needs the **Verified** role.
+
+
 ## Report
-`/report type:<Bug report | Feature request | Documentation problem | Development task>`
+`/report type:<Bug report | Feature request | Documentation problem | Development task | Something else>`
 
 Reports an FE-BUDDY issue. It does the same as the buttons in **#submit-an-issue**:
 1. A form asks for a title and the main question from the matching [GitHub issue template](https://github.com/Nikolai558/FE-BUDDY/tree/v3-development/.github/ISSUE_TEMPLATE).
 2. The bot shows existing issues that look similar. If one of them is yours, add a 👍 or a reply there instead. You also choose how the GitHub issue names you: your Discord username, your Discord user ID, or (after `/link-github`) your GitHub account, which gets you GitHub notifications for the issue.
 3. **Continue** opens a second form for the rest of the questions and any files (logs, screenshots).
+
+**Something else** is free-form, like a blank GitHub issue: a title, one text box, and optional files. It gets no type label, so its forum post is tagged **Needs triage**.
 
 The bot then creates the GitHub issue and a post for it in the issues forum. Small `.log` and `.txt` files are pasted into the issue, with anything that looks like a GitHub token blanked out. Other files stay on Discord, and the issue links to them.
 

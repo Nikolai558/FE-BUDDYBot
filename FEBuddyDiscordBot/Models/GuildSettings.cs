@@ -1,3 +1,5 @@
+using FEBuddyDiscordBot.Airac;
+
 namespace FEBuddyDiscordBot.Models;
 
 /// <summary>
@@ -20,6 +22,17 @@ public sealed record GuildSettings
     public ulong? PrivateMeetingRoleId { get; set; }
     public ulong? PrivateMeetingChannelId { get; set; }
     public ulong? RolesChannelId { get; set; }
+
+    // AIRAC pings (see MetafileWatchService)
+
+    /// <summary>Role pinged when the next cycle's d-TPP Metafile is out. Verified members get it unless they turn it off.</summary>
+    public ulong? AiracPingRoleId { get; set; }
+
+    /// <summary>Channel the AIRAC pings are posted in.</summary>
+    public ulong? AiracPingChannelId { get; set; }
+
+    /// <summary>UTC times of day the bot checks for the next cycle's metafile. Empty: never.</summary>
+    public TimeOnly[] AiracCheckTimesUtc { get; set; } = MetafileCheckTimes.Default;
 
     // GitHub issues (see Docs/GitHub Issue Sync.md)
 

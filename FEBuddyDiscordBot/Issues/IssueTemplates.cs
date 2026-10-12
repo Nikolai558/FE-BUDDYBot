@@ -13,6 +13,9 @@ public enum IssueKind
 
     [ChoiceDisplay("Development task")]
     Task,
+
+    [ChoiceDisplay("Something else")]
+    Other,
 }
 
 public enum FieldInput
@@ -66,6 +69,7 @@ public sealed record IssueField(
 /// <summary>
 /// A GitHub issue template (FE-BUDDY's .github/ISSUE_TEMPLATE) rebuilt as two Discord modals.
 /// Keep these in step with the YAML templates: same title prefix, labels, headings and choices.
+/// "Something else" stands in for GitHub's blank issue, which has no YAML template.
 /// </summary>
 /// <param name="Fields">In the template's order, which is the order of the headings in the issue body.</param>
 /// <param name="RestrictedToDevTaskRoles">Only members with a dev-task role (or Manage Server) may submit it.</param>
@@ -133,5 +137,15 @@ public sealed record IssueTemplate(
                 Description: "What to add, rework, or remove, and why. Steps, tests needed and references help.",
                 Placeholder: "Steps:\n1.\n2.\n\nTests needed:\n\nReferences:"),
         ], RestrictedToDevTaskRoles: true),
+
+        new(IssueKind.Other, "Something else", "📝", "", ["v3.x"],
+        [
+            new("details", "Details", 1, FieldInput.Paragraph, Required: true,
+                Description: "Anything that doesn't fit the other buttons. Write it however you like.",
+                Placeholder: "e.g. A question, a suggestion for the project, or something you noticed."),
+            new("attachments", "Attachments (optional)", 2, FieldInput.Files,
+                ModalLabel: "Attachments",
+                Description: "Screenshots, logs, or other files."),
+        ]),
     ];
 }

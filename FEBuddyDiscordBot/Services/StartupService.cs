@@ -13,6 +13,7 @@ public sealed class StartupService : IHostedService
     private readonly InteractionHandler _interactionHandler;
     private readonly GuildSettingsStore _settings;
     private readonly IssueStore _issueStore;
+    private readonly AiracStore _airacStore;
     private readonly GuildDefaultsOptions _defaults;
     private readonly BotOptions _options;
     private readonly IHostApplicationLifetime _lifetime;
@@ -26,6 +27,7 @@ public sealed class StartupService : IHostedService
         InteractionHandler interactionHandler,
         GuildSettingsStore settings,
         IssueStore issueStore,
+        AiracStore airacStore,
         IOptions<GuildDefaultsOptions> defaults,
         IOptions<BotOptions> options,
         IHostApplicationLifetime lifetime,
@@ -40,6 +42,7 @@ public sealed class StartupService : IHostedService
         _interactionHandler = interactionHandler;
         _settings = settings;
         _issueStore = issueStore;
+        _airacStore = airacStore;
         _defaults = defaults.Value;
         _options = options.Value;
         _lifetime = lifetime;
@@ -50,6 +53,7 @@ public sealed class StartupService : IHostedService
     {
         await _settings.InitializeAsync(cancellationToken);
         await _issueStore.InitializeAsync(cancellationToken);
+        await _airacStore.InitializeAsync(cancellationToken);
         await _interactionHandler.InitializeAsync();
 
         _discord.Ready += OnReadyAsync;
@@ -138,6 +142,8 @@ public sealed class StartupService : IHostedService
             s.PrivateMeetingRoleId = Role(_defaults.PrivateMeetingRoleName, "Private meeting");
             s.PrivateMeetingChannelId = Channel(_defaults.PrivateMeetingChannelName, "Private meeting");
             s.RolesChannelId = Channel(_defaults.RolesChannelName, "Roles");
+            s.AiracPingRoleId = Role(_defaults.AiracPingRoleName, "AIRAC pings");
+            s.AiracPingChannelId = Channel(_defaults.AiracPingChannelName, "AIRAC pings");
         });
 
         _logger.LogInformation("Database: seeded settings for {Guild} from GuildDefaults", guild.Name);

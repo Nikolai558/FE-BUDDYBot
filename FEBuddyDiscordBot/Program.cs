@@ -59,6 +59,11 @@ builder.Services.AddHttpClient(GitHubDeviceFlow.HttpClientName, http =>
     http.Timeout = TimeSpan.FromSeconds(20);
     http.DefaultRequestHeaders.UserAgent.ParseAdd("FE-BUDDYBot (+https://github.com/Nikolai558/FE-BUDDYBot)");
 });
+builder.Services.AddHttpClient(DtppMetafileApi.HttpClientName, http =>
+{
+    http.Timeout = TimeSpan.FromSeconds(30);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("FE-BUDDYBot (+https://github.com/Nikolai558/FE-BUDDYBot)");
+});
 builder.Services.AddHttpClient(IssueForumService.DiscordApiHttpClientName, http =>
 {
     http.BaseAddress = new Uri("https://discord.com/api/v10/");
@@ -84,10 +89,15 @@ builder.Services.AddSingleton<IssueSubmissionService>();
 builder.Services.AddSingleton<IssueInteractionHandler>();
 builder.Services.AddSingleton<IssueReplyService>();
 
+// AIRAC pings
+builder.Services.AddSingleton<AiracStore>();
+builder.Services.AddSingleton<DtppMetafileApi>();
+
 // Background services, started in this order
 builder.Services.AddHostedService<StartupService>();
 builder.Services.AddHostedService<ConnectionWatchdog>();
 builder.Services.AddHostedService<StatusUpdateService>();
 builder.Services.AddHostedService<IssueSyncService>();
+builder.Services.AddHostedService<MetafileWatchService>();
 
 builder.Build().Run();

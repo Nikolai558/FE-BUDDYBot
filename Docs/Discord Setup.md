@@ -25,12 +25,13 @@ https://discord.com/oauth2/authorize?client_id=<APPLICATION_ID>&scope=bot%20appl
 The bot's role (**Buddy Helper** in FE-Buddy) needs:
 
 * **View Channels**
-* **Manage Roles**: to give and remove the Verified, ARTCC Staff and private meeting roles
+* **Manage Roles**: to give and remove the Verified, ARTCC Staff, private meeting and AIRAC pings roles
 * **Manage Nicknames**: to set nicknames
+* **Manage Messages** and **Read Message History**, for `/clear-messages`, only in the channels where staff will use it. Give these as channel permissions (Edit Channel → Permissions), not on the bot's role, so the bot can't delete messages anywhere else.
 
 It does **not** need Administrator; leave that off. The bot also doesn't need to see any particular channel. Slash commands work in channels the bot can't see, and it still gets voice join events for private voice channels.
 
-**Role order matters.** In **Server Settings → Roles**, the bot's role must be **above** every role it assigns (Verified, ARTCC Staff, private meeting role). `/admin roles` warns you if it isn't.
+**Role order matters.** In **Server Settings → Roles**, the bot's role must be **above** every role it assigns (Verified, ARTCC Staff, private meeting role, AIRAC pings role). `/admin roles` warns you if it isn't.
 
 Discord never lets bots change the **server owner's** nickname; the bot skips the owner on purpose.
 
@@ -64,6 +65,22 @@ Result: `/give-role` works only in #assign-my-roles, and `/admin`, `/staff` and 
 **#assign-my-roles** must let @everyone **View Channel**, **Send Messages** and **Use Application Commands**, so new, unverified members can run `/give-role` there.
 
 Discord apps sometimes keep old command permissions cached for a few minutes; restarting Discord refreshes them.
+
+## AIRAC pings
+The bot pings a role when the next AIRAC cycle's d-TPP MetaFile is out (see [Automatic Events](Bot%20Commands/Discord%20Event%20Commands.md#next-airac-metafile-ping)).
+
+1. **Role:** create **NextAiracNotifications**, below the bot's role. Either turn on "Allow anyone to @mention this role", or give the bot **Mention @everyone, @here, and All Roles** in the channel below.
+2. **Channel:** create **#next-airac-notifications** at the top of the server. @everyone: View Channel and Read Message History, deny Send Messages. The bot: View Channel and Send Messages.
+3. **Tell the bot**, in #admin-chat:
+   ```
+   /admin roles airac-pings:@NextAiracNotifications
+   /admin channels airac-pings:#next-airac-notifications
+   /admin airac-check times:1500z, 2100z
+   ```
+   The first two reply with a warning if the bot can't post there or can't ping the role. `/admin airac-check` is optional: `1500z, 2100z` is the default.
+4. **Allow `/airac-pings`** under **Server Settings → Integrations → the bot**, e.g. in **#assign-my-roles** and **#next-airac-notifications**. The **Stop these pings** button works anywhere.
+
+Verified members get the role the next time the bot checks their roles (`/give-role` or connecting to voice). To give it to everyone now, run `/staff check-users mode:Add roles` (run **Report only** first to preview).
 
 ## Issue reporting
 Members report FE-BUDDY issues from Discord. Set up the [GitHub App](GitHub%20App%20Setup.md) first. How it works is described in [GitHub Issue Sync](GitHub%20Issue%20Sync.md).
