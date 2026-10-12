@@ -16,6 +16,7 @@ Compares every member (bots are skipped) with [VATUSA](https://www.vatusa.net/),
 **When roles are removed**
 * **Verified**: the member's Discord account is no longer linked on VATUSA.
 * **ARTCC Staff**: VATUSA no longer lists the member as ATM, DATM, TA, EC, FE or WM.
+* **AIRAC pings**: the member is no longer linked on VATUSA, or turned the pings off with `/airac-pings`.
 * No other roles are ever touched. Members VATUSA couldn't be reached for are skipped.
 * **Safety check:** if more than half of the members (and more than 5) come back as not linked, removals are skipped. That usually means VATUSA is having problems.
 
@@ -26,7 +27,7 @@ The reply (only visible to you) has a summary and a `.txt` report listing every 
 **Permission Requirements**
 * `Manage Roles`, `Manage Messages` and `Manage Channels` (all three)
 
-The bot makes the changes with its own permissions, so Discord's role order isn't checked for the person running the command. The bot only ever changes the Verified and ARTCC Staff roles. To limit the command to specific roles, go to Server Settings → Integrations → the bot → `/staff check-users`.
+The bot makes the changes with its own permissions, so Discord's role order isn't checked for the person running the command. The bot only ever changes the Verified, ARTCC Staff and AIRAC pings roles. To limit the command to specific roles, go to Server Settings → Integrations → the bot → `/staff check-users`.
 
 In FE-Buddy it can be used in **#feb-helper**, **#owner-chat** and **#admin-chat** (see [Discord Setup](../Discord%20Setup.md#command-permissions)).
 

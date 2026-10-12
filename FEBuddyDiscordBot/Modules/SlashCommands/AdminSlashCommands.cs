@@ -1,3 +1,4 @@
+using FEBuddyDiscordBot.Airac;
 using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Models;
 using FEBuddyDiscordBot.Services;
@@ -60,10 +61,11 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
     public async Task SetRolesAsync(
         [Summary("verified", "Role for members linked on VATUSA")] IRole? verified = null,
         [Summary("staff", "Role for ARTCC staff")] IRole? staff = null,
-        [Summary("private-meeting", "Role given while in the private meeting voice channel")] IRole? privateMeeting = null)
+        [Summary("private-meeting", "Role given while in the private meeting voice channel")] IRole? privateMeeting = null,
+        [Summary("airac-pings", "Role pinged when the next AIRAC cycle's d-TPP MetaFile is out")] IRole? airacPings = null)
     {
         List<string> warnings = [];
-        foreach (IRole? role in new[] { verified, staff, privateMeeting })
+        foreach (IRole? role in new[] { verified, staff, privateMeeting, airacPings })
         {
             if (role is not null && CantAssign(role) is string problem) warnings.Add(problem);
         }
@@ -73,7 +75,10 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
             if (verified is not null) s.VerifiedRoleId = verified.Id;
             if (staff is not null) s.StaffRoleId = staff.Id;
             if (privateMeeting is not null) s.PrivateMeetingRoleId = privateMeeting.Id;
+            if (airacPings is not null) s.AiracPingRoleId = airacPings.Id;
         });
+
+        if (airacPings is not null) warnings.AddRange(AiracPingProblems(updated));
 
         _logger.LogInformation("Config: roles updated by {User}", Context.User.Username);
 
@@ -84,16 +89,40 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
     [SlashCommand("channels", "Choose the channels the bot uses.")]
     public async Task SetChannelsAsync(
         [Summary("private-meeting", "Voice channel that grants the private meeting role"), ChannelTypes(ChannelType.Voice, ChannelType.Stage)] IVoiceChannel? privateMeeting = null,
-        [Summary("roles-channel", "Channel members are pointed to for /give-role"), ChannelTypes(ChannelType.Text)] ITextChannel? rolesChannel = null)
+        [Summary("roles-channel", "Channel members are pointed to for /give-role"), ChannelTypes(ChannelType.Text)] ITextChannel? rolesChannel = null,
+        [Summary("airac-pings", "Channel for the next-AIRAC-MetaFile pings"), ChannelTypes(ChannelType.Text, ChannelType.News)] ITextChannel? airacPings = null)
     {
         GuildSettings updated = await _settings.UpdateAsync(s =>
         {
             if (privateMeeting is not null) s.PrivateMeetingChannelId = privateMeeting.Id;
             if (rolesChannel is not null) s.RolesChannelId = rolesChannel.Id;
+            if (airacPings is not null) s.AiracPingChannelId = airacPings.Id;
         });
 
         _logger.LogInformation("Config: channels updated by {User}", Context.User.Username);
-        await RespondAsync("Channels updated.", embed: BuildSettingsEmbed(updated), ephemeral: true);
+
+        List<string> warnings = airacPings is not null ? AiracPingProblems(updated) : [];
+        string message = warnings.Count == 0 ? "Channels updated." : "Channels updated, but:\n" + string.Join("\n", warnings.Select(w => $"⚠️ {w}"));
+        await RespondAsync(message, embed: BuildSettingsEmbed(updated), ephemeral: true);
+    }
+
+    [SlashCommand("airac-check", "Set the UTC times the bot checks for the next AIRAC cycle's d-TPP MetaFile.")]
+    public async Task SetAiracCheckTimesAsync(
+        [Summary("times", "UTC times, every day, e.g. \"1200z, 2300z\" or \"1200z\". \"off\" stops checking.")] string times)
+    {
+        if (!MetafileCheckTimes.TryParse(times, out TimeOnly[] parsed, out string? error))
+        {
+            await RespondAsync(error, ephemeral: true);
+            return;
+        }
+
+        GuildSettings updated = await _settings.UpdateAsync(s => s.AiracCheckTimesUtc = parsed);
+        _logger.LogInformation("Config: AIRAC check times set to {Times} by {User}", MetafileCheckTimes.Format(parsed), Context.User.Username);
+
+        string message = parsed.Length == 0
+            ? "AIRAC checks are off. Nothing will be pinged until you set times again."
+            : $"The bot will check at {MetafileCheckTimes.Format(parsed)} every day.";
+        await RespondAsync(message, embed: BuildSettingsEmbed(updated), ephemeral: true);
     }
 
     [SlashCommand("issues", "Set up GitHub issue reporting.")]
@@ -229,6 +258,23 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         return problems;
     }
 
+    /// <summary>Anything stopping the AIRAC ping from being posted or from pinging its role.</summary>
+    private List<string> AiracPingProblems(GuildSettings s)
+    {
+        List<string> problems = [];
+        if (s.AiracPingChannelId is not ulong channelId || Context.Guild.GetChannel(channelId) is not { } channel) return problems;
+
+        ChannelPermissions has = Context.Guild.CurrentUser.GetPermissions(channel);
+        if (!has.ViewChannel || !has.SendMessages) problems.Add($"I need View Channel and Send Messages in <#{channelId}> to post the AIRAC pings.");
+
+        if (s.AiracPingRoleId is ulong roleId && Context.Guild.GetRole(roleId) is { IsMentionable: false } role && !has.MentionEveryone)
+        {
+            problems.Add($"I can't ping {role.Mention}: make it mentionable, or give me **Mention @everyone, @here, and All Roles** in <#{channelId}>.");
+        }
+
+        return problems;
+    }
+
     private string RepliesSetting(GuildSettings s) => s.IssueReplyMode switch
     {
         IssueReplyMode.MirrorAll when !_options.MessageContentIntent =>
@@ -275,6 +321,11 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
             .AddField("Channels",
                 $"Private meeting voice: {Channel(s.PrivateMeetingChannelId)}\n" +
                 $"Roles channel: {Channel(s.RolesChannelId)}")
+            .AddField("AIRAC pings",
+                $"Role: {Role(s.AiracPingRoleId)}\n" +
+                $"Channel: {Channel(s.AiracPingChannelId)}\n" +
+                $"Checks (UTC, daily): {(s.AiracCheckTimesUtc.Length == 0 ? "⬜ Off" : MetafileCheckTimes.Format(s.AiracCheckTimesUtc))}" +
+                (MetafileCheckTimes.NextAfter(DateTimeOffset.UtcNow, s.AiracCheckTimesUtc) is { } next ? $"\nNext check: <t:{next.ToUnixTimeSeconds()}:f>" : ""))
             .AddField("GitHub issues",
                 $"GitHub: {(_github.IsConfigured ? $"✅ {_github.Repository}" : "⚠️ GitHub App not configured")}\n" +
                 $"Forum: {Channel(s.IssueForumChannelId)}\n" +
@@ -284,7 +335,7 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
                 $"Dev-task roles: {(s.DevTaskRoleIds is { Length: > 0 } ids ? string.Join(" ", ids.Select(id => Role(id))) : "⚠️ not set")}\n" +
                 $"Submissions per hour before approval: {s.IssueSubmissionsPerHour}\n" +
                 $"Replies to GitHub: {RepliesSetting(s)}")
-            .WithFooter("Change with /admin events, roles, channels, issues, dev-task-roles")
+            .WithFooter("Change with /admin events, roles, channels, airac-check, issues, dev-task-roles")
             .Build();
     }
 }

@@ -69,4 +69,6 @@ public sealed class GuildDefaultsOptions
     public string? PrivateMeetingRoleName { get; set; }
     public string? PrivateMeetingChannelName { get; set; }
     public string? RolesChannelName { get; set; }
+    public string? AiracPingRoleName { get; set; }
+    public string? AiracPingChannelName { get; set; }
 }

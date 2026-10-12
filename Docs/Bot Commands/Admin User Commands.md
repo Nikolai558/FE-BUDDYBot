@@ -18,24 +18,40 @@ Turns the bot's automatic behaviors on or off (True/False). See [Automatic Event
 Example: `/admin events private-meeting-role:False`
 
 ## Roles
-`/admin roles [verified] [staff] [private-meeting]`
+`/admin roles [verified] [staff] [private-meeting] [airac-pings]`
 
 Pick the roles the bot assigns from Discord's role picker:
 * `verified`: members linked on VATUSA
 * `staff`: ARTCC staff (ATM, DATM, TA, EC, FE, WM)
 * `private-meeting`: given while someone is in the private meeting voice channel
+* `airac-pings`: pinged when the next cycle's d-TPP MetaFile is out. Verified members get it unless they turn it off with `/airac-pings`.
 
 The bot warns you if it can't assign a role you picked: if its own role is below that role, if it doesn't have Manage Roles, or if the role is managed by an integration.
 
 Example: `/admin roles verified:@Verified staff:@ARTCC STAFF`
 
 ## Channels
-`/admin channels [private-meeting] [roles-channel]`
+`/admin channels [private-meeting] [roles-channel] [airac-pings]`
 
 * `private-meeting`: the voice channel that grants the private meeting role
 * `roles-channel`: the channel new members are pointed to for `/give-role`
+* `airac-pings`: where the next-AIRAC-MetaFile pings are posted
+
+For the AIRAC pings, `/admin roles` and `/admin channels` warn you if the bot can't post in the channel or can't ping the role (see [Discord Setup](../Discord%20Setup.md#airac-pings)).
 
 Roles and channels are saved by ID, so renaming them later doesn't break anything.
+
+## AIRAC Check
+`/admin airac-check times:<times>`
+
+Sets when the bot checks for the next AIRAC cycle's d-TPP MetaFile (see [Automatic Events](Discord%20Event%20Commands.md#next-airac-metafile-ping)). Times are **UTC**, every day. List as many as you like (up to 48), separated by commas or spaces. They replace the current list.
+* `1200z, 2300z`: check at 12:00 and 23:00 UTC
+* `1200z`: check once a day at 12:00 UTC
+* `off`: stop checking
+
+`1200`, `12:00z` and `12:00` also work. Until changed, the bot checks at `1500z, 2100z` (11:00 and 17:00 US Eastern daylight time). A new list applies straight away, without a restart. `/admin settings` shows the times and when the next check is.
+
+Example: `/admin airac-check times:1200z, 2300z`
 
 ## Issues
 `/admin issues [forum] [submit-channel] [approval-channel] [approver-role] [per-hour] [replies]`

@@ -92,6 +92,7 @@ public sealed class RoleAssignmentService
 
     private readonly VatusaApi _vatusa;
     private readonly GuildSettingsStore _settings;
+    private readonly AiracStore _airac;
     private readonly ILogger<RoleAssignmentService> _logger;
     private readonly ulong _guildId;
 
@@ -102,11 +103,13 @@ public sealed class RoleAssignmentService
         DiscordSocketClient discord,
         VatusaApi vatusa,
         GuildSettingsStore settings,
+        AiracStore airac,
         IOptions<BotOptions> options,
         ILogger<RoleAssignmentService> logger)
     {
         _vatusa = vatusa;
         _settings = settings;
+        _airac = airac;
         _logger = logger;
         _guildId = options.Value.GuildId;
 
@@ -247,6 +250,9 @@ public sealed class RoleAssignmentService
 
         Compare(settings.VerifiedRoleId, "Verified", shouldBeVerified);
         if (settings.AssignStaffRole) Compare(settings.StaffRoleId, "Staff", shouldBeStaff);
+
+        // Verified members get the AIRAC pings role unless they turned the pings off (/airac-pings).
+        if (settings.AiracPingRoleId is not null) Compare(settings.AiracPingRoleId, "AIRAC pings", shouldBeVerified && !_airac.IsOptedOut(user.Id));
 
         string? newNickname = null;
         if (lookup.User is not null && settings.ChangeNicknames && !isOwner)

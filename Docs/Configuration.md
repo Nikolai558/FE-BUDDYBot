@@ -60,6 +60,8 @@ Only used the **first time** the bot starts with an empty database. It seeds the
 | `PrivateMeetingRoleName` | `voice-meeting-txt` |
 | `PrivateMeetingChannelName` | `Private Meeting` |
 | `RolesChannelName` | `assign-my-roles` |
+| `AiracPingRoleName` | `NextAiracNotifications` |
+| `AiracPingChannelName` | `next-airac-notifications` |
 
 Names that can't be found are logged as a warning and left unset; set them with `/admin roles` or `/admin channels`.
 
@@ -94,12 +96,13 @@ dotnet user-secrets set "GitHub:PrivateKeyPath" "<full path to the .pem file>"
 Use the **development** bot's token. Running the production token locally would start a second copy of the live bot.
 
 ## Server settings database
-Server settings are stored in `data/febuddybot.db` (SQLite), one row per server. The same file also holds which forum post belongs to which GitHub issue, and each member's issue submissions. View and change them in Discord:
+Server settings are stored in `data/febuddybot.db` (SQLite), one row per server. The same file also holds which forum post belongs to which GitHub issue, each member's issue submissions, which AIRAC cycles have been announced, and who turned the AIRAC pings off. View and change them in Discord:
 
 * `/admin settings`: show everything, with ⚠️ next to anything missing or deleted
 * `/admin events`: turn automatic behaviors on or off
-* `/admin roles`: choose the Verified, Staff and private meeting roles
-* `/admin channels`: choose the private meeting voice channel and the roles channel
+* `/admin roles`: choose the Verified, Staff, private meeting and AIRAC pings roles
+* `/admin channels`: choose the private meeting voice channel, the roles channel and the AIRAC pings channel
+* `/admin airac-check`: set the UTC times the bot checks for the next AIRAC MetaFile
 * `/admin issues`, `/admin dev-task-roles`: set up issue reporting (see [Discord Setup](Discord%20Setup.md#issue-reporting))
 
 Roles and channels are stored by ID, so renaming them in Discord doesn't break anything.

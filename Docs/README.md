@@ -3,11 +3,11 @@
 ## Commands
 | Page | Commands | Who can use them |
 |---|---|---|
-| [Standard User Commands](Bot%20Commands/Standard%20User%20Commands.md) | `/give-role`, `/report`, `/link-github`, "Send to GitHub" | Everyone (`/report` and replies: Verified) |
+| [Standard User Commands](Bot%20Commands/Standard%20User%20Commands.md) | `/give-role`, `/airac-pings`, `/report`, `/link-github`, "Send to GitHub" | Everyone (`/report` and replies: Verified) |
 | [Staff Commands](Bot%20Commands/Staff%20User%20Commands.md) | `/staff check-users` | Manage Roles + Manage Messages + Manage Channels |
-| [Admin Commands](Bot%20Commands/Admin%20User%20Commands.md) | `/admin settings`, `events`, `roles`, `channels`, `issues`, `dev-task-roles`, `issue-panel` | Manage Server, or the bot owner |
+| [Admin Commands](Bot%20Commands/Admin%20User%20Commands.md) | `/admin settings`, `events`, `roles`, `channels`, `airac-check`, `issues`, `dev-task-roles`, `issue-panel` | Manage Server, or the bot owner |
 | [Bot Owner Commands](Bot%20Commands/Bot%20Owner%20Commands.md) | `/owner set-status` | The bot owner |
-| [Automatic Events](Bot%20Commands/Discord%20Event%20Commands.md) | Member joins, voice connects, private meeting role | — |
+| [Automatic Events](Bot%20Commands/Discord%20Event%20Commands.md) | Member joins, voice connects, private meeting role, AIRAC MetaFile ping | — |
 | [Commands Under Development](Bot%20Commands/Commands%20Under%20Development.md) | — | — |
 
 All command replies are private (only visible to the person who ran the command).
