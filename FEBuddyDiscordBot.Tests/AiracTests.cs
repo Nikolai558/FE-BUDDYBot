@@ -108,5 +108,15 @@ public class AiracTests
         Assert.DoesNotContain("/airac-pings", text);
     }
 
+    [Theory]
+    [InlineData(false, false, true)]  // admin removed the role: pings off
+    [InlineData(true, true, false)]   // admin gave it back to someone who had turned them off: pings on
+    [InlineData(false, true, null)]   // already off
+    [InlineData(true, false, null)]   // already on
+    public void Manual_airac_role_change_sets_the_opt_out(bool hasRole, bool optedOut, bool? expected)
+    {
+        Assert.Equal(expected, Services.RoleAssignmentService.OptOutAfterManualChange(hasRole, optedOut));
+    }
+
     private static DateTimeOffset Utc(string value) => DateTimeOffset.Parse(value + "Z", System.Globalization.CultureInfo.InvariantCulture);
 }

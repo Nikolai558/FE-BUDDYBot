@@ -90,6 +90,9 @@ public sealed class RoleAssignmentService
 
     private const int MaxNicknameLength = 32;
 
+    // How long after the bot changes a member's AIRAC pings role it still expects Discord's member-updated event for it.
+    private static readonly TimeSpan BotChangeWindow = TimeSpan.FromMinutes(1);
+
     private readonly VatusaApi _vatusa;
     private readonly GuildSettingsStore _settings;
     private readonly AiracStore _airac;
@@ -98,6 +101,9 @@ public sealed class RoleAssignmentService
 
     // Configuration problems are logged once per run instead of on every event.
     private readonly ConcurrentDictionary<string, byte> _warned = new();
+
+    // Members whose AIRAC pings role the bot is changing itself, so OnGuildMemberUpdated doesn't take it for an admin's change.
+    private readonly ConcurrentDictionary<ulong, DateTimeOffset> _botAiracChanges = new();
 
     public RoleAssignmentService(
         DiscordSocketClient discord,
@@ -115,6 +121,7 @@ public sealed class RoleAssignmentService
 
         discord.UserJoined += OnUserJoined;
         discord.UserVoiceStateUpdated += OnUserVoiceStateUpdated;
+        discord.GuildMemberUpdated += OnGuildMemberUpdated;
     }
 
     private Task OnUserJoined(SocketGuildUser user)
@@ -153,6 +160,42 @@ public sealed class RoleAssignmentService
 
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// When someone other than the bot (an admin in Discord) removes the AIRAC pings role, turn the member's pings off so the
+    /// bot doesn't give it back. When they add it back, turn the pings on again.
+    /// </summary>
+    private Task OnGuildMemberUpdated(Cacheable<SocketGuildUser, ulong> before, SocketGuildUser after)
+    {
+        if (after.Guild.Id != _guildId || after.IsBot || !before.HasValue) return Task.CompletedTask;
+        if (_settings.Current.AiracPingRoleId is not ulong roleId) return Task.CompletedTask;
+
+        bool had = before.Value.Roles.Any(r => r.Id == roleId);
+        bool has = after.Roles.Any(r => r.Id == roleId);
+        if (had == has) return Task.CompletedTask;
+
+        if (_botAiracChanges.TryRemove(after.Id, out DateTimeOffset changedAt) && DateTimeOffset.UtcNow - changedAt < BotChangeWindow)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (OptOutAfterManualChange(has, _airac.IsOptedOut(after.Id)) is not bool optedOut) return Task.CompletedTask;
+
+        RunInBackground("record a manual AIRAC pings role change", async () =>
+        {
+            await _airac.SetOptedOutAsync(after.Id, optedOut);
+            _logger.LogInformation("AIRAC: {User} ({UserId}) had the AIRAC pings role {Change} by someone other than the bot; pings turned {State}",
+                after.Username, after.Id, has ? "added" : "removed", optedOut ? "off" : "on");
+        });
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// After someone other than the bot gives (<paramref name="hasRole"/>) or removes the AIRAC pings role: the member's new
+    /// opted-out state, or null if it already matches.
+    /// </summary>
+    internal static bool? OptOutAfterManualChange(bool hasRole, bool optedOut) => hasRole == optedOut ? !hasRole : null;
 
     private async Task UpdatePrivateMeetingRoleAsync(SocketGuildUser user, SocketVoiceState before, SocketVoiceState after, GuildSettings settings)
     {
@@ -323,6 +366,9 @@ public sealed class RoleAssignmentService
 
     private async Task<bool> TryChangeRoleAsync(SocketGuildUser user, SocketRole role, bool add, List<string> problems)
     {
+        bool airac = role.Id == _settings.Current.AiracPingRoleId;
+        if (airac) _botAiracChanges[user.Id] = DateTimeOffset.UtcNow;
+
         try
         {
             if (add) await user.AddRoleAsync(role);
@@ -331,6 +377,8 @@ public sealed class RoleAssignmentService
         }
         catch (HttpException ex) when (ex.DiscordCode == DiscordErrorCode.MissingPermissions)
         {
+            if (airac) _botAiracChanges.TryRemove(user.Id, out _);
+
             _logger.LogWarning("Missing Permissions: could not {Action} {Role} for {User} ({UserId}). The bot's role must be above {Role}.",
                 add ? "give" : "remove", role.Name, user.Username, user.Id, role.Name);
             problems.Add(add ? $"I couldn't give you {role.Mention}. An admin needs to move my role above it." : $"I couldn't remove {role.Mention}.");

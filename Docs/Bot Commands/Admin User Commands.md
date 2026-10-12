@@ -24,7 +24,7 @@ Pick the roles the bot assigns from Discord's role picker:
 * `verified`: members linked on VATUSA
 * `staff`: ARTCC staff (ATM, DATM, TA, EC, FE, WM)
 * `private-meeting`: given while someone is in the private meeting voice channel
-* `airac-pings`: pinged when the next cycle's d-TPP MetaFile is out. Verified members get it unless they turn it off with `/airac-pings`.
+* `airac-pings`: pinged when the next cycle's d-TPP MetaFile is out. Verified members get it unless they turn it off with `/airac-pings`. Removing it from someone by hand in Discord turns their pings off too, so the bot won't give it back; giving it back by hand turns them on again.
 
 The bot warns you if it can't assign a role you picked: if its own role is below that role, if it doesn't have Manage Roles, or if the role is managed by an integration.
 

@@ -16,7 +16,7 @@ Compares every member (bots are skipped) with [VATUSA](https://www.vatusa.net/),
 **When roles are removed**
 * **Verified**: the member's Discord account is no longer linked on VATUSA.
 * **ARTCC Staff**: VATUSA no longer lists the member as ATM, DATM, TA, EC, FE or WM.
-* **AIRAC pings**: the member is no longer linked on VATUSA, or turned the pings off with `/airac-pings`.
+* **AIRAC pings**: the member is no longer linked on VATUSA, or turned the pings off (with `/airac-pings`, or an admin removed the role by hand). Members who turned them off aren't given the role either.
 * No other roles are ever touched. Members VATUSA couldn't be reached for are skipped.
 * **Safety check:** if more than half of the members (and more than 5) come back as not linked, removals are skipped. That usually means VATUSA is having problems.
 
