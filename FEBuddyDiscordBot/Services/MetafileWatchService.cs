@@ -93,7 +93,7 @@ public sealed class MetafileWatchService : BackgroundService
             next.Id, next.EffectiveDate, role.Name, channel.Name);
 
         IUserMessage message = await channel.SendMessageAsync(
-            MetafilePing.Text(next.Id, role.Id),
+            MetafilePing.Text(next, role.Id),
             allowedMentions: new AllowedMentions { RoleIds = [role.Id] },
             components: MetafilePing.Buttons());
 
