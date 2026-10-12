@@ -72,6 +72,7 @@ public sealed class IssueInteractionHandler
         .WithTitle("Report an FE-BUDDY issue")
         .WithDescription(
             "Found a bug, have an idea, or spotted a docs problem? Press a button below and answer a few questions. " +
+            "For anything else, use **Something else** and write it however you like. " +
             "The bot creates a [GitHub issue](https://github.com/Nikolai558/FE-BUDDY/issues) and a forum post where you can follow it.\n\n" +
             "You need the **Verified** role. Your Discord username (or ID, if you prefer) appears on the public GitHub issue.")
         .WithColor(new Color(0x24292F))
