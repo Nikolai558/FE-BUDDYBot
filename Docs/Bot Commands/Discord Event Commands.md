@@ -21,13 +21,17 @@ Not an `/admin events` switch: it runs once the AIRAC pings role and channel are
 
 Every day at the UTC times set with [`/admin airac-check`](Admin%20User%20Commands.md#airac-check) (`1500z, 2100z` until changed), the bot checks whether the FAA has published the d-TPP MetaFile for the next AIRAC cycle (`https://aeronav.faa.gov/d-tpp/<cycle>/xml_data/d-tpp_Metafile.xml`). The FAA usually publishes it 15–18 days before the cycle's effective date. The first time it's there, the bot posts in the AIRAC pings channel:
 
-> @NextAiracNotifications AIRAC `2611` MetaFile is now available!
+> ## AIRAC 2611 MetaFile is available
+> The d-TPP MetaFile for the next cycle is out. You can now run FE-Buddy for AIRAC **2611** and get your full export.
+> <sub>Cycle 2611 takes effect October 29, 2026.</sub>
 >
-> You may now run FE-Buddy for the next cycle and get your full AIRAC export.
+> @NextAiracNotifications
 
 with a **Stop these pings** button. Each cycle is announced once. After that, the bot doesn't ask the FAA again until that cycle's effective date, when it starts looking for the cycle after it. Every check is logged (`AIRAC:` lines). If the bot is offline at a check time, it waits for the next one. With `/admin airac-check times:off`, it doesn't check at all.
 
 Verified members get the role with the Verified role (`/give-role`, joins, voice connects, `/staff check-users`). Members who turn the pings off with [`/airac-pings`](Standard%20User%20Commands.md#airac-pings) don't get it back.
+
+The same goes for members whose AIRAC pings role an admin removes by hand in Discord: the bot treats it as turning the pings off. If an admin gives the role back by hand, the pings are turned back on. Changes the bot makes itself (for example `/staff check-users` removing it from someone who is no longer linked) don't count.
 
 ## Nicknames and Staff Role
 `change-nicknames`, `assign-staff-role`

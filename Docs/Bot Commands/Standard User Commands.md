@@ -27,7 +27,7 @@ If your account isn't linked, the bot tells you how to link it at https://vatusa
 
 When the FAA publishes the next AIRAC cycle's d-TPP MetaFile, the bot pings the AIRAC pings role so you know you can run FE-Buddy for a full AIRAC export (see [Automatic Events](Discord%20Event%20Commands.md#next-airac-metafile-ping)). Verified members get the role automatically.
 
-* **Off** removes the role, and the bot remembers it: `/give-role`, joining voice and `/staff check-users` won't give it back. The **Stop these pings** button under each ping does the same.
+* **Off** removes the role, and the bot remembers it: `/give-role`, joining voice and `/staff check-users` won't give it back. The **Stop these pings** button under each ping does the same, and so does an admin removing the role from you in Discord.
 * **On** gives the role back. You need the Verified role.
 
 **Permission Requirements**
