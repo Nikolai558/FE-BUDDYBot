@@ -98,13 +98,13 @@ public class AiracTests
     }
 
     [Fact]
-    public void Ping_mentions_the_role_names_the_cycle_and_says_how_to_stop()
+    public void Ping_mentions_the_role_and_names_the_cycle_and_effective_date()
     {
-        string text = MetafilePing.Text("2611", 1234);
+        string text = MetafilePing.Text(new AiracCycle("2611", new DateOnly(2026, 11, 26)), 1234);
 
-        Assert.StartsWith("<@&1234> AIRAC `2611` MetaFile is now available!", text);
-        Assert.Contains("/airac-pings turn:Off", text);
-        Assert.Contains("Stop these pings", text);
+        Assert.StartsWith("<@&1234>\n## 📢 AIRAC 2611 MetaFile is available", text);
+        Assert.Contains("November 26, 2026", text);
+        Assert.DoesNotContain("/airac-pings", text);
     }
 
     private static DateTimeOffset Utc(string value) => DateTimeOffset.Parse(value + "Z", System.Globalization.CultureInfo.InvariantCulture);
