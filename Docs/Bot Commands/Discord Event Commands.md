@@ -27,7 +27,7 @@ Every day at the UTC times set with [`/admin airac-check`](Admin%20User%20Comman
 >
 > @AIRAC Notifications
 
-with a **Stop these pings** button. Each cycle is announced once. After that, the bot doesn't ask the FAA again until that cycle's effective date, when it starts looking for the cycle after it. Every check is logged (`AIRAC:` lines). If the bot is offline at a check time, it waits for the next one. With `/admin airac-check times:off`, it doesn't check at all.
+with a **Stop these pings** button. Each cycle is announced once, and the bot deletes its announcement for the previous cycle first so only the latest one stays in the channel (anything else posted there is left alone). After that, the bot doesn't ask the FAA again until that cycle's effective date, when it starts looking for the cycle after it. Every check is logged (`AIRAC:` lines). If the bot is offline at a check time, it waits for the next one. With `/admin airac-check times:off`, it doesn't check at all.
 
 Verified members get the role with the Verified role (`/give-role`, joins, voice connects, `/staff check-users`). Members who turn the pings off with [`/airac-pings`](Standard%20User%20Commands.md#airac-pings) don't get it back.
 

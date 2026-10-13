@@ -1,3 +1,5 @@
+using System.Net;
+using Discord.Net;
 using FEBuddyDiscordBot.Airac;
 using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Models;
@@ -92,11 +94,37 @@ public sealed class MetafileWatchService : BackgroundService
         _logger.LogInformation("AIRAC: {Cycle} d-TPP Metafile is available (effective {Effective:yyyy-MM-dd}); pinging {Role} in #{Channel}",
             next.Id, next.EffectiveDate, role.Name, channel.Name);
 
+        await DeletePreviousAnnouncementAsync(guild, cancellationToken);
+
         IUserMessage message = await channel.SendMessageAsync(
             MetafilePing.Text(next, role.Id),
             allowedMentions: new AllowedMentions { RoleIds = [role.Id] },
             components: MetafilePing.Buttons());
 
         await _store.RecordAnnouncementAsync(next.Id, found, channel.Id, message.Id, cancellationToken);
+    }
+
+    /// <summary>
+    /// Deletes the last cycle's announcement so the channel doesn't fill up with old ones. Only the bot's own post goes;
+    /// anything else in the channel is left alone. A failed delete is logged and doesn't stop the new announcement.
+    /// </summary>
+    private async Task DeletePreviousAnnouncementAsync(SocketGuild guild, CancellationToken cancellationToken)
+    {
+        if (await _store.LatestAnnouncementAsync(cancellationToken) is not { } previous) return;
+        if (guild.GetTextChannel(previous.ChannelId) is not { } channel) return; // the channel is gone, and the post with it
+
+        try
+        {
+            await channel.DeleteMessageAsync(previous.MessageId);
+            _logger.LogInformation("AIRAC: deleted the {Cycle} announcement in #{Channel}", previous.CycleId, channel.Name);
+        }
+        catch (HttpException ex) when (ex.HttpCode == HttpStatusCode.NotFound)
+        {
+            // Someone already deleted it.
+        }
+        catch (HttpException ex)
+        {
+            _logger.LogWarning("AIRAC: couldn't delete the {Cycle} announcement in #{Channel}: {Error}", previous.CycleId, channel.Name, ex.Message);
+        }
     }
 }

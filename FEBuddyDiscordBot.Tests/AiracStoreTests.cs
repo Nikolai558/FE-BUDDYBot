@@ -57,6 +57,21 @@ public sealed class AiracStoreTests : IDisposable
         Assert.False(await restarted.WasAnnouncedAsync("2612"));
     }
 
+    [Fact]
+    public async Task The_latest_announcement_is_the_newest_cycle()
+    {
+        AiracStore store = await CreateStoreAsync();
+        Assert.Null(await store.LatestAnnouncementAsync());
+
+        await store.RecordAnnouncementAsync("2612", DateTimeOffset.UtcNow, 10, 22);
+        await store.RecordAnnouncementAsync("2611", DateTimeOffset.UtcNow, 10, 21);
+        await store.RecordAnnouncementAsync("2701", DateTimeOffset.UtcNow, 11, 23);
+        await store.RecordAnnouncementAsync("2613", DateTimeOffset.UtcNow, 10, 24);
+
+        AiracStore restarted = await CreateStoreAsync();
+        Assert.Equal(("2701", 11UL, 23UL), await restarted.LatestAnnouncementAsync());
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
