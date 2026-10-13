@@ -9,14 +9,17 @@ public sealed class InteractionHandler
     private readonly InteractionService _interactions;
     private readonly IServiceProvider _services;
     private readonly IssueInteractionHandler _issues;
+    private readonly ReleaseInteractionHandler _releases;
     private readonly ILogger<InteractionHandler> _logger;
 
-    public InteractionHandler(DiscordSocketClient discord, InteractionService interactions, IServiceProvider services, IssueInteractionHandler issues, ILogger<InteractionHandler> logger)
+    public InteractionHandler(DiscordSocketClient discord, InteractionService interactions, IServiceProvider services, IssueInteractionHandler issues,
+        ReleaseInteractionHandler releases, ILogger<InteractionHandler> logger)
     {
         _discord = discord;
         _interactions = interactions;
         _services = services;
         _issues = issues;
+        _releases = releases;
         _logger = logger;
     }
 
@@ -35,6 +38,13 @@ public sealed class InteractionHandler
         if (IssueInteractionHandler.CanHandle(interaction))
         {
             _ = Task.Run(() => _issues.HandleAsync(interaction));
+            return;
+        }
+
+        // Likewise the Post, Edit and Cancel buttons under release announcement previews.
+        if (ReleaseInteractionHandler.CanHandle(interaction))
+        {
+            _ = Task.Run(() => _releases.HandleAsync(interaction));
             return;
         }
 

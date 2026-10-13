@@ -79,6 +79,7 @@ builder.Services.AddSingleton<VatusaApi>();
 builder.Services.AddSingleton<LoggingService>();
 builder.Services.AddSingleton<InteractionHandler>();
 builder.Services.AddSingleton<RoleAssignmentService>();
+builder.Services.AddSingleton<BotHealth>();
 
 // GitHub issues
 builder.Services.AddSingleton<IssueStore>();
@@ -94,6 +95,10 @@ builder.Services.AddSingleton<IssueReplyService>();
 builder.Services.AddSingleton<AiracStore>();
 builder.Services.AddSingleton<DtppMetafileApi>();
 
+// FE-BUDDY release announcements
+builder.Services.AddSingleton<ReleaseStore>();
+builder.Services.AddSingleton<ReleaseInteractionHandler>();
+
 // Bot log channel. ReadFrom.Services (above) adds the sink to Serilog.
 builder.Services.AddSingleton<DiscordLogSink>();
 builder.Services.AddSingleton<ILogEventSink>(services => services.GetRequiredService<DiscordLogSink>());
@@ -104,6 +109,7 @@ builder.Services.AddHostedService<ConnectionWatchdog>();
 builder.Services.AddHostedService<StatusUpdateService>();
 builder.Services.AddHostedService<IssueSyncService>();
 builder.Services.AddHostedService<MetafileWatchService>();
+builder.Services.AddHostedService<ReleaseWatchService>();
 // Last, so it stops first and can still post while Discord is connected.
 builder.Services.AddHostedService<DiscordLogService>();
 

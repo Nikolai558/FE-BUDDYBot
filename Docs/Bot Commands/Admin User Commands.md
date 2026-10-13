@@ -78,6 +78,26 @@ Shows a role picker. The roles you pick can submit **Development tasks**. Everyo
 
 Posts the "Report an FE-BUDDY issue" message with one button per issue type in the submit channel. Run it again after changing the panel's text; delete the old copy yourself.
 
+## Releases
+`/admin releases [level] [channel] [review-channel] [ping-role] [turn-off]`
+
+Announces new FE-BUDDY releases (see [Automatic Events](Discord%20Event%20Commands.md#fe-buddy-release-announcements)). Every new release at the chosen level or above gets a preview in the review channel, where an admin presses **Post**, **Edit** or **Cancel**. Nothing is posted publicly until an admin presses Post.
+* `level`: which releases to announce. Each level includes the ones above it:
+  * **Alpha**: alpha, beta, RC and stable releases
+  * **Beta**: beta, RC and stable releases
+  * **RC**: release candidates and stable releases
+  * **Stable only**
+* `channel`: the public channel the announcements are posted in
+* `review-channel`: the private channel the previews wait in, e.g. **#admin-chat**
+* `ping-role`: the role pinged at the bottom of each posted announcement. Members give it to themselves, or take it away, with the button under each announcement; nobody gets it automatically. The bot's role must be above it.
+* `turn-off`: **Announcements** stops announcing releases; **Ping role** posts them without a ping
+
+The level comes from the release's tag: `3.0.0-alpha.5` is Alpha, `3.0.0-beta.10` is Beta, `3.0.0-rc.1` is RC, and `2.9.3` is Stable. Any other pre-release counts as Alpha.
+
+The reply warns you if a channel isn't set, if the bot can't post or ping there, or if the server has no `:FEB_cheer:` emoji for the title.
+
+Example: `/admin releases level:Beta (beta, RC and stable) channel:#announcements review-channel:#admin-chat ping-role:@Release Notifications`
+
 ## Bot Logs
 `/admin logs [channel] [alert-role] [turn-off]`
 

@@ -40,6 +40,22 @@ public sealed record GitHubIssue(
 
 public sealed record GitHubApp([property: JsonPropertyName("id")] long Id);
 
+public sealed record GitHubRelease(
+    [property: JsonPropertyName("tag_name")] string TagName,
+    [property: JsonPropertyName("name")] string? Name,
+    [property: JsonPropertyName("body")] string? Body,
+    [property: JsonPropertyName("html_url")] string HtmlUrl,
+    [property: JsonPropertyName("draft")] bool Draft,
+    [property: JsonPropertyName("prerelease")] bool Prerelease,
+    [property: JsonPropertyName("published_at")] DateTimeOffset? PublishedAt)
+{
+    /// <summary>The version from the tag, without a leading "v": "3.0.0-beta.10".</summary>
+    public string Version => TagName.TrimStart('v', 'V');
+}
+
+/// <summary>The GitHub App's REST API allowance: requests left this hour, and when it resets.</summary>
+public sealed record GitHubRateLimit(int Limit, int Remaining, DateTimeOffset ResetsAt);
+
 public sealed record GitHubComment(
     [property: JsonPropertyName("id")] long Id,
     [property: JsonPropertyName("html_url")] string HtmlUrl,
@@ -66,6 +82,7 @@ public sealed class GitHubApi
     private readonly GitHubOptions _options;
 
     private string? _openIssuesETag;
+    private string? _releasesETag;
 
     public GitHubApi(IHttpClientFactory httpClientFactory, GitHubAppAuth auth, IOptions<GitHubOptions> options)
     {
@@ -255,6 +272,32 @@ public sealed class GitHubApi
     /// <summary>Make the next <see cref="ListOpenIssuesIfChangedAsync"/> return the full list even if nothing changed.</summary>
     public void ForgetOpenIssuesETag() => _openIssuesETag = null;
 
+    /// <summary>
+    /// The 20 newest published releases (drafts left out), or null when nothing has changed since the last call.
+    /// "Not modified" answers don't count against GitHub's rate limit.
+    /// </summary>
+    public async Task<IReadOnlyList<GitHubRelease>?> ListReleasesIfChangedAsync(CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Get, $"repos/{Repository}/releases?per_page=20",
+            etag: _releasesETag, cancellationToken: cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotModified) return null;
+
+        List<GitHubRelease> releases = await ReadAsync<List<GitHubRelease>>(response, "list releases", cancellationToken);
+        _releasesETag = response.Headers.ETag?.ToString();
+        return releases.Where(r => !r.Draft).ToList();
+    }
+
+    /// <summary>Make the next <see cref="ListReleasesIfChangedAsync"/> return the list even if nothing changed.</summary>
+    public void ForgetReleasesETag() => _releasesETag = null;
+
+    /// <summary>How many REST requests the GitHub App has left this hour. Asking doesn't use one up.</summary>
+    public async Task<GitHubRateLimit> GetRateLimitAsync(CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await SendAsync(HttpMethod.Get, "rate_limit", cancellationToken: cancellationToken);
+        RateLimitResponse limits = await ReadAsync<RateLimitResponse>(response, "read the rate limit", cancellationToken);
+        return new(limits.Resources.Core.Limit, limits.Resources.Core.Remaining, DateTimeOffset.FromUnixTimeSeconds(limits.Resources.Core.Reset));
+    }
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string url, HttpContent? content = null, string? etag = null, CancellationToken cancellationToken = default)
     {
         if (!IsConfigured) throw new GitHubException("The GitHub App isn't configured (GitHub:AppId and GitHub:PrivateKeyPath).");
@@ -287,4 +330,13 @@ public sealed class GitHubApi
     }
 
     private sealed record SearchResponse([property: JsonPropertyName("items")] List<GitHubIssue> Items);
+
+    private sealed record RateLimitResponse([property: JsonPropertyName("resources")] RateLimitResources Resources);
+
+    private sealed record RateLimitResources([property: JsonPropertyName("core")] RateLimitCore Core);
+
+    private sealed record RateLimitCore(
+        [property: JsonPropertyName("limit")] int Limit,
+        [property: JsonPropertyName("remaining")] int Remaining,
+        [property: JsonPropertyName("reset")] long Reset);
 }

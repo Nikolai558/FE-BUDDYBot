@@ -1,5 +1,6 @@
 using System.Text;
 using FEBuddyDiscordBot.DataAccess;
+using FEBuddyDiscordBot.Models;
 using FEBuddyDiscordBot.Services;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
@@ -122,6 +123,106 @@ public sealed class StaffSlashCommands : InteractionModuleBase<SocketInteraction
         {
             CheckUsersLock.Release();
         }
+    }
+
+    [SlashCommand("check-user", "Compare one member with VATUSA and show what the bot would change, with a button to fix it.")]
+    public async Task CheckUserAsync([Summary("member", "The member to check")] IGuildUser member)
+    {
+        if (Context.Guild.GetUser(member.Id) is not { IsBot: false } user)
+        {
+            await RespondAsync("That isn't a member the bot can check (bots are skipped).", ephemeral: true);
+            return;
+        }
+
+        await DeferAsync(ephemeral: true);
+        MemberCheck check = await _roleAssignment.CheckAsync(user);
+
+        ComponentBuilder buttons = new();
+        if (check.Status != VatusaLookupStatus.Unavailable && check.HasDifferences)
+        {
+            buttons.WithButton("Fix (update roles and nickname)", $"{FixUserButtonId}{user.Id}", ButtonStyle.Primary);
+        }
+
+        await FollowupAsync(embed: BuildMemberEmbed(check), components: buttons.Build(), ephemeral: true);
+    }
+
+    private const string FixUserButtonId = "staff-check-user:fix:";
+
+    [ComponentInteraction(FixUserButtonId + "*", ignoreGroupNames: true)]
+    public async Task FixUserAsync(string userId)
+    {
+        if (!ulong.TryParse(userId, out ulong id) || Context.Guild.GetUser(id) is not { } user)
+        {
+            await RespondAsync("That member isn't in the server any more.", ephemeral: true);
+            return;
+        }
+
+        await DeferAsync();
+
+        // Check again: VATUSA or the member's roles may have changed since the report.
+        MemberCheck check = await _roleAssignment.CheckAsync(user);
+        if (check.Status == VatusaLookupStatus.Unavailable)
+        {
+            await FollowupAsync("VATUSA is unavailable right now. Nothing was changed; try again in a few minutes.", ephemeral: true);
+            return;
+        }
+
+        RoleAssignmentResult result = await _roleAssignment.ApplyAsync(check, MemberChanges.All, logUnchanged: true);
+        _logger.LogInformation("Check User: {Staff} fixed {User} ({UserId})", Context.User.Username, user.Username, user.Id);
+
+        static string Names(IEnumerable<IRole> roles) => roles.Any() ? string.Join(" ", roles.Select(r => r.Mention)) : "none";
+        string done = $"**Fixed by {Context.User.Mention}.** Added: {Names(result.Added)}. Removed: {Names(result.Removed)}. " +
+                      $"Nickname: {(result.NicknameChanged ? $"now `{result.Nickname}`" : "unchanged")}.";
+        if (result.Problems.Count > 0) done += "\n" + string.Join("\n", result.Problems.Distinct().Select(p => $"⚠️ {p}"));
+
+        await ModifyOriginalResponseAsync(m =>
+        {
+            m.Content = done;
+            m.Embed = BuildMemberEmbed(check);
+            m.Components = new ComponentBuilder().Build();
+            m.AllowedMentions = AllowedMentions.None;
+        });
+    }
+
+    /// <summary>What VATUSA says about a member and what Update all would change for them.</summary>
+    private static Embed BuildMemberEmbed(MemberCheck check)
+    {
+        SocketGuildUser user = check.User;
+        EmbedBuilder embed = new EmbedBuilder()
+            .WithAuthor(user.DisplayName, user.GetDisplayAvatarUrl())
+            .WithDescription($"{user.Mention} (`{user.Username}`, ID `{user.Id}`)");
+
+        if (check.Status == VatusaLookupStatus.Unavailable)
+        {
+            return embed.WithColor(Color.Orange).AddField("VATUSA", "Unavailable right now. Try again in a few minutes.").Build();
+        }
+
+        VatusaUser? vatusa = check.Vatusa;
+        string staff = vatusa?.Roles is { Length: > 0 } roles
+            ? "\nStaff: " + string.Join(", ", roles.Where(r => r.Role is not null).Select(r => $"{r.Role} ({r.Facility})"))
+            : "";
+        embed.AddField("VATUSA", check.Status == VatusaLookupStatus.NotLinked || vatusa is null
+            ? "❌ Not linked. Their Discord account isn't linked on VATUSA."
+            : $"✅ CID {vatusa.Cid}, {(vatusa.NamePrivacy == true ? "name hidden on VATUSA" : $"{vatusa.FirstName} {vatusa.LastName}")}, {vatusa.Facility}, {vatusa.RatingShort}{staff}");
+
+        static string Mentions(IEnumerable<IRole> roles) => string.Join(" ", roles.Select(r => r.Mention));
+        List<string> roleLines = [];
+        if (check.RolesToAdd.Count > 0) roleLines.Add($"Add: {Mentions(check.RolesToAdd)}");
+        if (check.RolesToRemove.Count > 0) roleLines.Add($"Remove: {Mentions(check.RolesToRemove)}");
+        if (check.RolesKept.Count > 0) roleLines.Add($"Has: {Mentions(check.RolesKept)}");
+        embed.AddField("Bot-managed roles", roleLines.Count > 0 ? string.Join("\n", roleLines) : "None, and none to add.");
+
+        string nickname = check.NewNickname is not null ? $"`{check.CurrentNickname ?? user.Username}` → `{check.NewNickname}`"
+            : check.IsServerOwner ? "Unchanged (Discord doesn't let bots rename the server owner)"
+            : $"Unchanged{(check.CurrentNickname is null ? "" : $" (`{check.CurrentNickname}`)")}";
+        embed.AddField("Nickname", nickname);
+
+        if (check.Problems.Count > 0) embed.AddField("Problems", string.Join("\n", check.Problems.Distinct().Select(p => $"⚠️ {p}")));
+
+        return embed
+            .WithColor(check.HasDifferences ? Color.Orange : Color.Green)
+            .WithFooter(check.HasDifferences ? "Fix adds and removes these roles and updates the nickname." : "Nothing to change.")
+            .Build();
     }
 
     internal static MemberChanges ChangesFor(CheckUsersMode mode) => mode switch

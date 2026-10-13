@@ -15,6 +15,7 @@ public sealed class IssueSyncService : BackgroundService
     private readonly GitHubApi _github;
     private readonly IssueForumService _forum;
     private readonly IssueStore _store;
+    private readonly BotHealth _health;
     private readonly GitHubOptions _options;
     private readonly ILogger<IssueSyncService> _logger;
 
@@ -23,6 +24,7 @@ public sealed class IssueSyncService : BackgroundService
         GitHubApi github,
         IssueForumService forum,
         IssueStore store,
+        BotHealth health,
         IOptions<GitHubOptions> options,
         ILogger<IssueSyncService> logger)
     {
@@ -30,6 +32,7 @@ public sealed class IssueSyncService : BackgroundService
         _github = github;
         _forum = forum;
         _store = store;
+        _health = health;
         _options = options.Value;
         _logger = logger;
     }
@@ -55,6 +58,7 @@ public sealed class IssueSyncService : BackgroundService
             {
                 // Check everything again next time rather than trusting "not modified".
                 _github.ForgetOpenIssuesETag();
+                _health.RecordIssueSync(false, ex.Message);
                 _logger.LogWarning(ex is GitHubException ? null : ex, "Issues: sync with GitHub failed: {Error}", ex.Message);
             }
         }
@@ -98,6 +102,10 @@ public sealed class IssueSyncService : BackgroundService
 
         // Redoing things is harmless (the bot compares with what each post shows), so after a failure check the
         // same window again next time. But don't let one stuck post hold everything back for more than an hour.
+        _health.RecordIssueSync(failures == 0, failures == 0
+            ? $"{comments.Count} changed comments, {issues.Count} changed issues"
+            : $"{failures} of {comments.Count + issues.Count} changes failed; see the log");
+
         if (failures == 0 || started - since > TimeSpan.FromHours(1))
         {
             // A minute's overlap covers changes GitHub hadn't finished indexing when we asked.

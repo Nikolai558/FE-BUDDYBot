@@ -58,6 +58,17 @@ public sealed class AiracStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task Announcement_time_is_read_back_in_utc()
+    {
+        AiracStore store = await CreateStoreAsync();
+        DateTimeOffset found = new(2026, 10, 12, 15, 0, 3, TimeSpan.Zero);
+        await store.RecordAnnouncementAsync("2611", found, 10, 20);
+
+        Assert.Equal(found, await store.GetAnnouncedAtAsync("2611"));
+        Assert.Null(await store.GetAnnouncedAtAsync("2612"));
+    }
+
+    [Fact]
     public async Task The_latest_announcement_is_the_newest_cycle()
     {
         AiracStore store = await CreateStoreAsync();

@@ -17,6 +17,7 @@ public sealed class MetafileWatchService : BackgroundService
     private readonly DtppMetafileApi _faa;
     private readonly AiracStore _store;
     private readonly GuildSettingsStore _settings;
+    private readonly BotHealth _health;
     private readonly ulong _guildId;
     private readonly ILogger<MetafileWatchService> _logger;
 
@@ -25,6 +26,7 @@ public sealed class MetafileWatchService : BackgroundService
         DtppMetafileApi faa,
         AiracStore store,
         GuildSettingsStore settings,
+        BotHealth health,
         IOptions<BotOptions> options,
         ILogger<MetafileWatchService> logger)
     {
@@ -32,6 +34,7 @@ public sealed class MetafileWatchService : BackgroundService
         _faa = faa;
         _store = store;
         _settings = settings;
+        _health = health;
         _guildId = options.Value.GuildId;
         _logger = logger;
     }
@@ -55,6 +58,7 @@ public sealed class MetafileWatchService : BackgroundService
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
+                _health.RecordAiracCheck(false, ex.Message);
                 _logger.LogWarning(ex, "AIRAC: metafile check failed: {Error}", ex.Message);
             }
         }
@@ -63,13 +67,18 @@ public sealed class MetafileWatchService : BackgroundService
     private async Task CheckAsync(CancellationToken cancellationToken)
     {
         AiracCycle next = AiracCycle.Next(DateOnly.FromDateTime(DateTime.UtcNow));
-        if (await _store.WasAnnouncedAsync(next.Id, cancellationToken)) return;
+        if (await _store.WasAnnouncedAsync(next.Id, cancellationToken))
+        {
+            _health.RecordAiracCheck(true, $"{next.Id} already announced");
+            return;
+        }
 
         GuildSettings settings = _settings.Current;
         SocketGuild? guild = _discord.GetGuild(_guildId);
         if (_discord.ConnectionState != ConnectionState.Connected || guild is null)
         {
             _logger.LogInformation("AIRAC: skipped the {Cycle} metafile check; not connected to Discord", next.Id);
+            _health.RecordAiracCheck(false, "skipped: not connected to Discord");
             return;
         }
 
@@ -77,6 +86,7 @@ public sealed class MetafileWatchService : BackgroundService
             || settings.AiracPingChannelId is not ulong channelId || guild.GetTextChannel(channelId) is not { } channel)
         {
             _logger.LogInformation("AIRAC: skipped the {Cycle} metafile check; set the role and channel with /admin roles and /admin channels (airac-pings)", next.Id);
+            _health.RecordAiracCheck(false, "skipped: AIRAC pings role or channel not set");
             return;
         }
 
@@ -84,11 +94,16 @@ public sealed class MetafileWatchService : BackgroundService
         if (status == MetafileStatus.NotYetPublished)
         {
             _logger.LogInformation("AIRAC: {Cycle} d-TPP Metafile not published yet", next.Id);
+            _health.RecordAiracCheck(true, $"{next.Id} MetaFile not published yet");
             return;
         }
 
         // Unknown was logged by the check; try again at the next check time.
-        if (status != MetafileStatus.Available) return;
+        if (status != MetafileStatus.Available)
+        {
+            _health.RecordAiracCheck(false, $"couldn't tell if the {next.Id} MetaFile is out (FAA unreachable or unexpected answer)");
+            return;
+        }
 
         DateTimeOffset found = DateTimeOffset.UtcNow;
         _logger.LogInformation("AIRAC: {Cycle} d-TPP Metafile is available (effective {Effective:yyyy-MM-dd}); pinging {Role} in #{Channel}",
@@ -102,6 +117,7 @@ public sealed class MetafileWatchService : BackgroundService
             components: MetafilePing.Buttons());
 
         await _store.RecordAnnouncementAsync(next.Id, found, channel.Id, message.Id, cancellationToken);
+        _health.RecordAiracCheck(true, $"{next.Id} MetaFile is out; announced");
     }
 
     /// <summary>
