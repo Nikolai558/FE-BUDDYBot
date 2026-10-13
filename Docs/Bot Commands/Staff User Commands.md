@@ -36,6 +36,19 @@ In FE-Buddy it can be used in **#feb-helper**, **#owner-chat** and **#admin-chat
 Roles: someone (123…) VATUSA CID 1234567 ZLC | added: none | removed: ARTCC Staff | kept: Verified | nickname: unchanged
 ```
 
+## Check User
+`/staff check-user member:<member>`
+
+Compares one member with [VATUSA](https://www.vatusa.net/) and shows, only to you:
+* What VATUSA says: CID, name (unless they've hidden it on VATUSA), facility, rating and staff positions, or that their Discord account isn't linked
+* Which of the bot's roles (Verified, ARTCC Staff, AIRAC pings) they'd gain or lose, and which they have
+* What their nickname would become
+
+If anything differs, a **Fix** button makes those changes: it adds and removes the roles and updates the nickname, like `/staff check-users mode:Update all` for just this member. It checks VATUSA again first. The `/admin events` switches still apply, and nothing is changed if VATUSA can't be reached.
+
+**Permission Requirements**
+* The same as Check Users: `Manage Roles`, `Manage Messages` and `Manage Channels`
+
 ## Clear Messages
 `/clear-messages amount:<1-100 | all> [keep-pinned]`
 

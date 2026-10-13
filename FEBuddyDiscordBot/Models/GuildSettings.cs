@@ -1,4 +1,5 @@
 using FEBuddyDiscordBot.Airac;
+using FEBuddyDiscordBot.Announcements;
 
 namespace FEBuddyDiscordBot.Models;
 
@@ -56,6 +57,20 @@ public sealed record GuildSettings
 
     /// <summary>Which replies in issue posts become GitHub comments.</summary>
     public IssueReplyMode IssueReplyMode { get; set; } = IssueReplyMode.MirrorAll;
+
+    // FE-BUDDY release announcements (see ReleaseWatchService)
+
+    /// <summary>The least finished releases to announce (higher levels are announced too). Null: off.</summary>
+    public ReleaseLevel? ReleaseLevel { get; set; }
+
+    /// <summary>Public channel the approved announcements are posted in.</summary>
+    public ulong? ReleaseChannelId { get; set; }
+
+    /// <summary>Private channel where each announcement waits as a preview with Post, Edit and Cancel buttons.</summary>
+    public ulong? ReleaseReviewChannelId { get; set; }
+
+    /// <summary>Role pinged by each posted announcement. Not set: posted without a ping.</summary>
+    public ulong? ReleasePingRoleId { get; set; }
 
     // Bot logs (see DiscordLogService)
 

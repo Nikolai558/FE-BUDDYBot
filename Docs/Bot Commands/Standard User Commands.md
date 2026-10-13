@@ -34,6 +34,24 @@ When the FAA publishes the next AIRAC cycle's d-TPP MetaFile, the bot pings the 
 * None for **Off**. **On** needs the **Verified** role.
 
 
+## Help
+`/help`
+
+Lists the bot's commands you can use, with what each one does, grouped into Everyone, Staff, Admin and Bot owner. Only commands your permissions allow are shown: a member without Manage Server doesn't see the `/admin` commands, and so on. Some commands only work in certain channels (set under **Server Settings → Integrations → the bot**). The reply is only visible to you.
+
+**Permission Requirements**
+* The **Verified** role (run `/give-role` first). Members with Manage Server can always use it.
+
+
+## AIRAC
+`/airac`
+
+Shows the current and next AIRAC cycles, when the next one takes effect, and whether its d-TPP MetaFile is out yet, so you know if FE-Buddy can do a full export for it. If it isn't out, it says when the FAA usually publishes it and when the bot checks next. The reply is only visible to you.
+
+**Permission Requirements**
+* None. Anyone in the server can use it, in the channels allowed under **Server Settings → Integrations → the bot**.
+
+
 ## Report
 `/report type:<Bug report | Feature request | Documentation problem | Development task | Something else>`
 

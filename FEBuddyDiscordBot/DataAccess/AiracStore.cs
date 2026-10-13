@@ -76,6 +76,30 @@ public sealed class AiracStore
         return await select.ExecuteScalarAsync(cancellationToken) is not null;
     }
 
+    /// <summary>When the bot found the cycle's metafile and announced it, or null if it hasn't yet.</summary>
+    public async Task<DateTimeOffset?> GetAnnouncedAtAsync(string cycleId, CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        select.CommandText = "SELECT found_utc FROM airac_metafile_announcements WHERE cycle_id = $cycleId";
+        select.Parameters.AddWithValue("$cycleId", cycleId);
+        return await select.ExecuteScalarAsync(cancellationToken) is string found
+            ? DateTimeOffset.Parse(found, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
+            : null;
+    }
+
+    /// <summary>Where the latest cycle's announcement was posted, or null if no cycle has been announced yet.</summary>
+    public async Task<(string CycleId, ulong ChannelId, ulong MessageId)?> LatestAnnouncementAsync(CancellationToken cancellationToken = default)
+    {
+        await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);
+        await using SqliteCommand select = connection.CreateCommand();
+        // Cycle ids are YYNN, so they sort in order.
+        select.CommandText = "SELECT cycle_id, channel_id, message_id FROM airac_metafile_announcements ORDER BY cycle_id DESC LIMIT 1";
+        await using SqliteDataReader reader = await select.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken)) return null;
+        return (reader.GetString(0), (ulong)reader.GetInt64(1), (ulong)reader.GetInt64(2));
+    }
+
     public async Task RecordAnnouncementAsync(string cycleId, DateTimeOffset foundUtc, ulong channelId, ulong messageId, CancellationToken cancellationToken = default)
     {
         await using SqliteConnection connection = await _database.OpenAsync(cancellationToken);

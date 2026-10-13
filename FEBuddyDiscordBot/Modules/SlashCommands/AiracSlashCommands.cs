@@ -37,6 +37,42 @@ public sealed class AiracSlashCommands : InteractionModuleBase<SocketInteraction
         await RespondAsync(await SetAsync((SocketGuildUser)Context.User, turn == AiracPingSetting.On), ephemeral: true, allowedMentions: AllowedMentions.None);
     }
 
+    [SlashCommand("airac", "Show the current and next AIRAC cycles, and whether the next cycle's d-TPP MetaFile is out.")]
+    public async Task ShowCyclesAsync()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        AiracCycle current = AiracCycle.Current(DateOnly.FromDateTime(now.UtcDateTime));
+        AiracCycle next = AiracCycle.Next(DateOnly.FromDateTime(now.UtcDateTime));
+        DateTimeOffset nextStarts = new(next.EffectiveDate.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        GuildSettings settings = _settings.Current;
+
+        string metafile;
+        if (await _store.GetAnnouncedAtAsync(next.Id) is { } found)
+        {
+            metafile = $"✅ Out since <t:{found.ToUnixTimeSeconds()}:f>. You can run FE-Buddy for AIRAC **{next.Id}** and get your full export.";
+        }
+        else
+        {
+            // The FAA usually publishes it 15 to 18 days before the cycle starts.
+            DateOnly from = next.EffectiveDate.AddDays(-18), to = next.EffectiveDate.AddDays(-15);
+            metafile = $"Not out yet. The FAA usually publishes it {from:MMMM d} to {to:MMMM d}.";
+            metafile += MetafileCheckTimes.NextAfter(now, settings.AiracCheckTimesUtc) is { } check
+                ? $" The bot checks again <t:{check.ToUnixTimeSeconds()}:R>."
+                : " The bot isn't checking for it right now.";
+        }
+
+        Embed embed = new EmbedBuilder()
+            .WithTitle("AIRAC cycles")
+            .WithColor(Color.Blue)
+            .AddField("Current cycle", $"**{current.Id}**, in effect since {current.EffectiveDate:MMMM d, yyyy}")
+            .AddField("Next cycle", $"**{next.Id}**, takes effect {next.EffectiveDate:MMMM d, yyyy} at 0000z (<t:{nextStarts.ToUnixTimeSeconds()}:R>)")
+            .AddField($"AIRAC {next.Id} d-TPP MetaFile", metafile)
+            .WithFooter(settings.AiracPingRoleId is null ? "" : "Get pinged when it's out: /airac-pings turn:On")
+            .Build();
+
+        await RespondAsync(embed: embed, ephemeral: true);
+    }
+
     [ComponentInteraction(MetafilePing.StopButtonId, ignoreGroupNames: true)]
     public async Task StopPingsAsync()
     {

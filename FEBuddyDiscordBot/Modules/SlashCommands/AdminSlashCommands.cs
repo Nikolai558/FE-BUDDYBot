@@ -1,6 +1,7 @@
 using FEBuddyDiscordBot.Airac;
 using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Models;
+using FEBuddyDiscordBot.Announcements;
 using FEBuddyDiscordBot.Services;
 
 namespace FEBuddyDiscordBot.Modules.SlashCommands;
@@ -214,6 +215,31 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         await RespondAsync(message, embed: BuildSettingsEmbed(updated), ephemeral: true);
     }
 
+    [SlashCommand("releases", "Announce new FE-BUDDY releases: a preview for admins to post, edit or cancel.")]
+    public async Task SetReleasesAsync(
+        [Summary("level", "Which releases to announce. Each level includes the ones above it.")] ReleaseLevel? level = null,
+        [Summary("channel", "Public channel the announcements are posted in"), ChannelTypes(ChannelType.Text, ChannelType.News)] ITextChannel? channel = null,
+        [Summary("review-channel", "Private channel where each announcement waits for an admin"), ChannelTypes(ChannelType.Text)] ITextChannel? reviewChannel = null,
+        [Summary("ping-role", "Role pinged by each announcement")] IRole? pingRole = null,
+        [Summary("turn-off", "Stop announcing releases, or post them without a ping")] ReleaseSetting? turnOff = null)
+    {
+        GuildSettings updated = await _settings.UpdateAsync(s =>
+        {
+            if (turnOff == ReleaseSetting.Announcements) s.ReleaseLevel = null;
+            if (turnOff == ReleaseSetting.PingRole) s.ReleasePingRoleId = null;
+            if (level is ReleaseLevel l) s.ReleaseLevel = l;
+            if (channel is not null) s.ReleaseChannelId = channel.Id;
+            if (reviewChannel is not null) s.ReleaseReviewChannelId = reviewChannel.Id;
+            if (pingRole is not null) s.ReleasePingRoleId = pingRole.Id;
+        });
+
+        _logger.LogInformation("Config: release announcement settings updated by {User}", Context.User.Username);
+
+        List<string> warnings = ReleaseProblems(updated);
+        string message = warnings.Count == 0 ? "Release announcement settings updated." : "Release announcement settings updated, but:\n" + string.Join("\n", warnings.Select(w => $"- {w}"));
+        await RespondAsync(message, embed: BuildSettingsEmbed(updated), ephemeral: true);
+    }
+
     [SlashCommand("issue-panel", "Post the report-an-issue buttons in the submit channel.")]
     public async Task PostIssuePanelAsync()
     {
@@ -291,6 +317,51 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         if (s.AiracPingRoleId is ulong roleId && Context.Guild.GetRole(roleId) is { IsMentionable: false } role && !has.MentionEveryone)
         {
             problems.Add($"I can't ping {role.Mention}: make it mentionable, or give me **Mention @everyone, @here, and All Roles** in <#{channelId}>.");
+        }
+
+        return problems;
+    }
+
+    /// <summary>Anything stopping release announcements from reaching the review channel, being posted, or pinging their role.</summary>
+    private List<string> ReleaseProblems(GuildSettings s)
+    {
+        List<string> problems = [];
+        if (s.ReleaseLevel is null) return problems;
+        if (!_github.IsConfigured) problems.Add("The GitHub App isn't configured on the server (GitHub:AppId and GitHub:PrivateKeyPath), so the bot can't see releases.");
+
+        SocketGuildUser me = Context.Guild.CurrentUser;
+        if (s.ReleaseReviewChannelId is not ulong reviewId || Context.Guild.GetChannel(reviewId) is not { } review)
+        {
+            problems.Add("Set the review channel with `review-channel:`. Without it, new releases aren't announced.");
+        }
+        else
+        {
+            ChannelPermissions has = me.GetPermissions(review);
+            if (!has.ViewChannel || !has.SendMessages || !has.EmbedLinks) problems.Add($"I need View Channel, Send Messages and Embed Links in <#{reviewId}> to post previews.");
+        }
+
+        if (s.ReleaseChannelId is not ulong channelId || Context.Guild.GetChannel(channelId) is not { } channel)
+        {
+            problems.Add("Set the announcement channel with `channel:`, or the previews' Post button won't work.");
+            return problems;
+        }
+
+        ChannelPermissions inChannel = me.GetPermissions(channel);
+        if (!inChannel.ViewChannel || !inChannel.SendMessages) problems.Add($"I need View Channel and Send Messages in <#{channelId}> to post announcements.");
+        if (s.ReleasePingRoleId is ulong roleId && Context.Guild.GetRole(roleId) is { } role)
+        {
+            if (!role.IsMentionable && !inChannel.MentionEveryone)
+            {
+                problems.Add($"I can't ping {role.Mention}: make it mentionable, or give me **Mention @everyone, @here, and All Roles** in <#{channelId}>.");
+            }
+
+            // Members give themselves the role with the button under each announcement.
+            if (CantAssign(role) is string problem) problems.Add(problem);
+        }
+
+        if (!Context.Guild.Emotes.Any(e => e.Name == ReleaseAnnouncement.EmojiName))
+        {
+            problems.Add($"This server has no `:{ReleaseAnnouncement.EmojiName}:` emoji, so the announcement title won't have one.");
         }
 
         return problems;
@@ -383,12 +454,26 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
                 $"Dev-task roles: {(s.DevTaskRoleIds is { Length: > 0 } ids ? string.Join(" ", ids.Select(id => Role(id))) : "⚠️ not set")}\n" +
                 $"Submissions per hour before approval: {s.IssueSubmissionsPerHour}\n" +
                 $"Replies to GitHub: {RepliesSetting(s)}")
+            .AddField("Release announcements",
+                (s.ReleaseLevel is ReleaseLevel level ? $"Announce: {ReleaseLevels.Name(level)}{(level == ReleaseLevel.Stable ? " only" : " and up")}" : "Announce: off") + "\n" +
+                $"Channel: {Channel(s.ReleaseChannelId)}\n" +
+                $"Review channel: {Channel(s.ReleaseReviewChannelId)}\n" +
+                $"Ping role: {(s.ReleasePingRoleId is null ? "none" : Role(s.ReleasePingRoleId))}")
             .AddField("Bot logs",
                 $"Channel: {(s.LogChannelId is null ? "⬜ Off" : Channel(s.LogChannelId))}\n" +
                 $"Alert role (pinged for errors): {(s.AlertRoleId is null ? "⬜ Off" : Role(s.AlertRoleId))}")
-            .WithFooter("Change with /admin events, roles, channels, airac-check, issues, dev-task-roles, logs")
+            .WithFooter("Change with /admin events, roles, channels, airac-check, issues, dev-task-roles, releases, logs")
             .Build();
     }
+}
+
+public enum ReleaseSetting
+{
+    [ChoiceDisplay("Announcements (stop announcing releases)")]
+    Announcements,
+
+    [ChoiceDisplay("Ping role (post without a ping)")]
+    PingRole,
 }
 
 public enum BotLogSetting

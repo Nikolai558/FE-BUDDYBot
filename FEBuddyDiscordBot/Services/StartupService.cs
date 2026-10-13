@@ -15,6 +15,7 @@ public sealed class StartupService : IHostedService
     private readonly GuildSettingsStore _settings;
     private readonly IssueStore _issueStore;
     private readonly AiracStore _airacStore;
+    private readonly ReleaseStore _releaseStore;
     private readonly GuildDefaultsOptions _defaults;
     private readonly BotOptions _options;
     private readonly IHostApplicationLifetime _lifetime;
@@ -29,6 +30,7 @@ public sealed class StartupService : IHostedService
         GuildSettingsStore settings,
         IssueStore issueStore,
         AiracStore airacStore,
+        ReleaseStore releaseStore,
         IOptions<GuildDefaultsOptions> defaults,
         IOptions<BotOptions> options,
         IHostApplicationLifetime lifetime,
@@ -44,6 +46,7 @@ public sealed class StartupService : IHostedService
         _settings = settings;
         _issueStore = issueStore;
         _airacStore = airacStore;
+        _releaseStore = releaseStore;
         _defaults = defaults.Value;
         _options = options.Value;
         _lifetime = lifetime;
@@ -55,6 +58,7 @@ public sealed class StartupService : IHostedService
         await _settings.InitializeAsync(cancellationToken);
         await _issueStore.InitializeAsync(cancellationToken);
         await _airacStore.InitializeAsync(cancellationToken);
+        await _releaseStore.InitializeAsync(cancellationToken);
         await _interactionHandler.InitializeAsync();
 
         _discord.Ready += OnReadyAsync;

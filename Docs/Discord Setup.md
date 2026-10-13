@@ -93,6 +93,20 @@ The bot pings a role when the next AIRAC cycle's d-TPP MetaFile is out (see [Aut
 
 Verified members get the role the next time the bot checks their roles (`/give-role` or connecting to voice). To give it to everyone now, run `/staff check-users mode:Add roles` (run **Report only** first to preview).
 
+## Release announcements
+New FE-BUDDY releases wait as a preview for an admin to post (see [Automatic Events](Bot%20Commands/Discord%20Event%20Commands.md#fe-buddy-release-announcements)). This needs the [GitHub App](GitHub%20App%20Setup.md).
+
+1. **Role:** create **Release Notifications**, below the bot's role. Members opt in and out with the button under each announcement, so the bot must be able to assign it. Like the AIRAC role, it doesn't need to be mentionable.
+2. **Channels:** a public channel for the announcements (read-only for members, like #next-airac-notifications), and a private review channel. **#admin-chat** works.
+3. **Emoji:** the title ends with the server's `:FEB_cheer:` emoji, if it has one with exactly that name.
+4. **Tell the bot**, in #admin-chat:
+   ```
+   /admin releases level:Beta (beta, RC and stable) channel:#announcements review-channel:#admin-chat ping-role:@Release Notifications
+   ```
+   It warns you about anything missing.
+
+The first check after this only notes the releases already out. Only releases after that are announced.
+
 ## Bot log channel
 The bot posts what it does, and any errors, in a private channel, and pings a role when something goes wrong (see [Admin Commands](Bot%20Commands/Admin%20User%20Commands.md#bot-logs)).
 
