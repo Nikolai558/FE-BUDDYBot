@@ -28,7 +28,7 @@ Pick the roles the bot assigns from Discord's role picker:
 
 The bot warns you if it can't assign a role you picked: if its own role is below that role, if it doesn't have Manage Roles, or if the role is managed by an integration.
 
-Example: `/admin roles verified:@Verified staff:@ARTCC STAFF`
+Example: `/admin roles verified:@Verified staff:@ARTCC Staff`
 
 ## Channels
 `/admin channels [private-meeting] [roles-channel] [airac-pings]`

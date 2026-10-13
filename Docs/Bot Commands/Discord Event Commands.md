@@ -25,7 +25,7 @@ Every day at the UTC times set with [`/admin airac-check`](Admin%20User%20Comman
 > The d-TPP MetaFile for the next cycle is out. You can now run FE-Buddy for AIRAC **2611** and get your full export.
 > <sub>Cycle 2611 takes effect October 29, 2026.</sub>
 >
-> @NextAiracNotifications
+> @AIRAC Notifications
 
 with a **Stop these pings** button. Each cycle is announced once. After that, the bot doesn't ask the FAA again until that cycle's effective date, when it starts looking for the cycle after it. Every check is logged (`AIRAC:` lines). If the bot is offline at a check time, it waits for the next one. With `/admin airac-check times:off`, it doesn't check at all.
 

@@ -56,11 +56,11 @@ Only used the **first time** the bot starts with an empty database. It seeds the
 |---|---|
 | `AssignRolesOnJoin`, `AssignRolesOnVoiceJoin`, `PrivateMeetingRoleEnabled`, `ChangeNicknames`, `AssignStaffRole` | `true` |
 | `VerifiedRoleName` | `Verified` |
-| `StaffRoleName` | `ARTCC STAFF` |
+| `StaffRoleName` | `ARTCC Staff` |
 | `PrivateMeetingRoleName` | `voice-meeting-txt` |
 | `PrivateMeetingChannelName` | `Private Meeting` |
 | `RolesChannelName` | `assign-my-roles` |
-| `AiracPingRoleName` | `NextAiracNotifications` |
+| `AiracPingRoleName` | `AIRAC Notifications` |
 | `AiracPingChannelName` | `next-airac-notifications` |
 
 Names that can't be found are logged as a warning and left unset; set them with `/admin roles` or `/admin channels`.

@@ -19,6 +19,7 @@ Where each command can be used is controlled in Discord under **Server Settings 
 * [Discord Setup](Discord%20Setup.md): Developer Portal, bot permissions and command permissions
 * [Deployment](Deployment.md): running, updating and rolling back on the server
 * [GitHub App Setup](GitHub%20App%20Setup.md): the GitHub App the bot uses for issue reporting
+* [discord-iac](../tools/discord-iac/README.md): audit and change FE-Buddy's roles, channels and permissions from a YAML file
 
 ## Features
 * [GitHub Issue Sync](GitHub%20Issue%20Sync.md): submitting and following FE-BUDDY GitHub issues from Discord (design and build stages)

@@ -5,7 +5,7 @@
 Checks your account on the [VATUSA](https://www.vatusa.net/) website. If your Discord account is linked there, the bot gives you:
 * The **Verified** role
 * The **ARTCC Staff** role, if VATUSA lists you as ATM, DATM, TA, EC, FE or WM at a facility. VATUSA records assistants (AEC, AFE, AWM) under the same codes, so they get it too.
-* The **AIRAC pings** role (**NextAiracNotifications** in FE-Buddy), unless you've turned the pings off with [`/airac-pings`](#airac-pings)
+* The **AIRAC pings** role (**AIRAC Notifications** in FE-Buddy), unless you've turned the pings off with [`/airac-pings`](#airac-pings)
 
 It also sets your **nickname** to `{First Name} {Last Name} | {ARTCC}`:
 * If your nickname already has a `|`, everything before it is kept and only the ARTCC after it is updated. For example, `Nik | ZOB` becomes `Nik | ZLC`.
