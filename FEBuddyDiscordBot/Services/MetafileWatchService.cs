@@ -53,7 +53,7 @@ public sealed class MetafileWatchService : BackgroundService
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogWarning("AIRAC: metafile check failed: {Error}", ex.ToString());
+                _logger.LogWarning(ex, "AIRAC: metafile check failed: {Error}", ex.Message);
             }
         }
     }

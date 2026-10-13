@@ -18,7 +18,7 @@ public sealed class UserSlashCommands : InteractionModuleBase<SocketInteractionC
     public async Task GiveRoleAsync()
     {
         await DeferAsync(ephemeral: true);
-        RoleAssignmentResult result = await _roleAssignment.AssignRolesAsync((SocketGuildUser)Context.User, notifyIfNotLinked: false);
+        RoleAssignmentResult result = await _roleAssignment.AssignRolesAsync((SocketGuildUser)Context.User, notifyIfNotLinked: false, logUnchanged: true);
         await FollowupAsync(embed: result.ToEmbed(), ephemeral: true);
     }
 }

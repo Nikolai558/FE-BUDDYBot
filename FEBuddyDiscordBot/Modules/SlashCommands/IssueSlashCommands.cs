@@ -70,7 +70,7 @@ public sealed class IssueSlashCommands : InteractionModuleBase<SocketInteraction
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Issues: Send to GitHub failed for message {MessageId}: {Error}", message.Id, ex is GitHubException ? ex.Message : ex.ToString());
+            _logger.LogWarning(ex is GitHubException ? null : ex, "Issues: Send to GitHub failed for message {MessageId}: {Error}", message.Id, ex.Message);
             await FollowupAsync("GitHub didn't accept it. Please try again in a few minutes.", ephemeral: true);
         }
     }

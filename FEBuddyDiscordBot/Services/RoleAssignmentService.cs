@@ -132,7 +132,7 @@ public sealed class RoleAssignmentService
 
         if (_settings.Current.AssignRolesOnJoin)
         {
-            RunInBackground("assign roles on join", () => AssignRolesAsync(user, notifyIfNotLinked: true));
+            RunInBackground("assign roles on join", () => AssignRolesAsync(user, notifyIfNotLinked: true, logUnchanged: true));
         }
 
         return Task.CompletedTask;
@@ -155,7 +155,7 @@ public sealed class RoleAssignmentService
         // Only when connecting to voice (not when hopping between channels) to avoid repeated VATUSA lookups.
         if (settings.AssignRolesOnVoiceJoin && before.VoiceChannel is null && after.VoiceChannel is not null)
         {
-            RunInBackground("assign roles on voice join", () => AssignRolesAsync(user, notifyIfNotLinked: false));
+            RunInBackground("assign roles on voice join", () => AssignRolesAsync(user, notifyIfNotLinked: false, logUnchanged: false));
         }
 
         return Task.CompletedTask;
@@ -232,24 +232,29 @@ public sealed class RoleAssignmentService
     /// </summary>
     /// <param name="user">Member to update.</param>
     /// <param name="notifyIfNotLinked">Send the member a DM explaining how to link their account if it isn't linked.</param>
-    public async Task<RoleAssignmentResult> AssignRolesAsync(SocketGuildUser user, bool notifyIfNotLinked)
+    /// <param name="logUnchanged">
+    /// Log a line even if nothing changed. Off for voice connects, which happen all the time; those are only logged at Debug
+    /// unless a role or nickname changed or there was a problem.
+    /// </param>
+    public async Task<RoleAssignmentResult> AssignRolesAsync(SocketGuildUser user, bool notifyIfNotLinked, bool logUnchanged)
     {
         MemberCheck check = await CheckAsync(user);
+        LogLevel unchangedLevel = logUnchanged ? LogLevel.Information : LogLevel.Debug;
 
         if (check.Status == VatusaLookupStatus.Unavailable)
         {
-            _logger.LogInformation("Roles: {User} ({UserId}) skipped; VATUSA unavailable", user.Username, user.Id);
+            _logger.Log(unchangedLevel, "Roles: {User} ({UserId}) skipped; VATUSA unavailable", user.Username, user.Id);
             return RoleAssignmentResult.Empty(RoleAssignmentOutcome.VatusaUnavailable);
         }
 
         if (check.Status == VatusaLookupStatus.NotLinked)
         {
-            _logger.LogInformation("Roles: {User} ({UserId}) is not linked on VATUSA", user.Username, user.Id);
+            _logger.Log(unchangedLevel, "Roles: {User} ({UserId}) is not linked on VATUSA", user.Username, user.Id);
             if (notifyIfNotLinked) await SendNotLinkedMessageAsync(user, _settings.Current);
             return RoleAssignmentResult.Empty(RoleAssignmentOutcome.NotLinked);
         }
 
-        return await ApplyAsync(check, MemberChanges.AddRoles | MemberChanges.Nickname, logUnchanged: true);
+        return await ApplyAsync(check, MemberChanges.AddRoles | MemberChanges.Nickname, logUnchanged);
     }
 
     /// <summary>
@@ -310,7 +315,7 @@ public sealed class RoleAssignmentService
     /// <summary>
     /// Make the changes from a <see cref="CheckAsync"/> result, limited to the kinds of change allowed by <paramref name="changes"/>.
     /// </summary>
-    /// <param name="logUnchanged">Log a summary line even if nothing changed (bulk checks only log members that changed).</param>
+    /// <param name="logUnchanged">Log a summary line even if nothing changed. Otherwise unchanged members are only logged at Debug.</param>
     public async Task<RoleAssignmentResult> ApplyAsync(MemberCheck check, MemberChanges changes, bool logUnchanged)
     {
         SocketGuildUser user = check.User;
@@ -387,11 +392,11 @@ public sealed class RoleAssignmentService
     }
 
     // One line per member, e.g.:
-    // Roles: nikolai558 (353684697651478528) VATUSA CID 1234567 ZLC | added: Verified | removed: none | kept: ARTCC STAFF | nickname: unchanged (server owner)
+    // Roles: nikolai558 (353684697651478528) VATUSA CID 1234567 ZLC | added: Verified | removed: none | kept: ARTCC Staff | nickname: unchanged (server owner)
     private void LogSummary(MemberCheck check, RoleAssignmentResult result, bool logUnchanged)
     {
         bool changed = result.Added.Count > 0 || result.Removed.Count > 0 || result.NicknameChanged;
-        if (!changed && !logUnchanged && result.Problems.Count == 0) return;
+        LogLevel level = changed || logUnchanged || result.Problems.Count > 0 ? LogLevel.Information : LogLevel.Debug;
 
         static string Names(IEnumerable<IRole> roles) => roles.Any() ? string.Join(", ", roles.Select(r => r.Name)) : "none";
 
@@ -401,7 +406,7 @@ public sealed class RoleAssignmentService
             : check.NewNickname is not null ? $"not changed (would be '{check.NewNickname}')"
             : "unchanged";
 
-        _logger.LogInformation("Roles: {User} ({UserId}) VATUSA {Vatusa} | added: {Added} | removed: {Removed} | kept: {Kept} | nickname: {Nickname}{Problems}",
+        _logger.Log(level, "Roles: {User} ({UserId}) VATUSA {Vatusa} | added: {Added} | removed: {Removed} | kept: {Kept} | nickname: {Nickname}{Problems}",
             check.User.Username, check.User.Id, vatusa, Names(result.Added), Names(result.Removed), Names(check.RolesKept), nickname,
             result.Problems.Count > 0 ? " | problems: " + string.Join("; ", result.Problems) : "");
     }

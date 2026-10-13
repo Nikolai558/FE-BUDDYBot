@@ -33,7 +33,7 @@ In FE-Buddy it can be used in **#feb-helper**, **#owner-chat** and **#admin-chat
 
 **Log:** each member who was changed gets one line in the bot's log, e.g.
 ```
-Roles: someone (123…) VATUSA CID 1234567 ZLC | added: none | removed: ARTCC STAFF | kept: Verified | nickname: unchanged
+Roles: someone (123…) VATUSA CID 1234567 ZLC | added: none | removed: ARTCC Staff | kept: Verified | nickname: unchanged
 ```
 
 ## Clear Messages

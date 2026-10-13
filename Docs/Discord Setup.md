@@ -16,22 +16,33 @@ What the bot needs in the Discord Developer Portal and in the server. There are 
 Invite link, with `<APPLICATION_ID>` from the portal's **General Information** page:
 
 ```
-https://discord.com/oauth2/authorize?client_id=<APPLICATION_ID>&scope=bot%20applications.commands&permissions=402654208
+https://discord.com/oauth2/authorize?client_id=<APPLICATION_ID>&scope=bot%20applications.commands&permissions=292460686416
 ```
 
-`402654208` gives the bot **View Channels**, **Manage Roles** and **Manage Nicknames**, which is all it needs.
+`292460686416` is the permission set in [Bot role](#bot-role) below. Discord gives it to the bot's own role (the one named after the bot) when it joins.
 
 ## Bot role
-The bot's role (**Buddy Helper** in FE-Buddy) needs:
+All of the bot's permissions go on its own role, **server-wide**, so it can do its job in every channel. In FE-Buddy that role is **Buddy Helper**.
 
-* **View Channels**
-* **Manage Roles**: to give and remove the Verified, ARTCC Staff, private meeting and AIRAC pings roles
-* **Manage Nicknames**: to set nicknames
-* **Manage Messages** and **Read Message History**, for `/clear-messages`, only in the channels where staff will use it. Give these as channel permissions (Edit Channel → Permissions), not on the bot's role, so the bot can't delete messages anywhere else.
+| Permission | Used for |
+|---|---|
+| View Channels, Read Message History | Seeing every channel; reading messages for `/clear-messages` and issue replies |
+| Send Messages, Send Messages in Threads, Embed Links, Attach Files | AIRAC pings, issue posts and replies, approval requests, the issue panel, bot logs |
+| Add Reactions | The warning reaction on issue replies that couldn't be sent to GitHub |
+| Mention @everyone, @here, and All Roles | Pinging the AIRAC pings, approver and alert roles, which aren't mentionable |
+| Manage Messages | `/clear-messages` |
+| Manage Threads | Archiving, locking and editing issue posts |
+| Manage Channels | Adding the issue forum's tags |
+| Manage Roles | Giving and removing the Verified, ARTCC Staff, private meeting and AIRAC pings roles |
+| Manage Nicknames | Setting nicknames |
 
-It does **not** need Administrator; leave that off. The bot also doesn't need to see any particular channel. Slash commands work in channels the bot can't see, and it still gets voice join events for private voice channels.
+It does **not** need Administrator; leave that off.
 
-**Role order matters.** In **Server Settings → Roles**, the bot's role must be **above** every role it assigns (Verified, ARTCC Staff, private meeting role, AIRAC pings role). `/admin roles` warns you if it isn't.
+**The bot should see every channel.** Where a category denies @everyone **View Channel**, allow it to the bot's role on that category. From November 16, 2026, Discord hides channels a bot can't view from it entirely. The same goes for any permission a channel denies @everyone, such as **Create Posts** on the issue forum: allow it to the bot's role there.
+
+**Role order matters.** In **Server Settings → Roles**, the bot's **highest** role must be **above** every role it assigns (Verified, ARTCC Staff, private meeting role, AIRAC pings role). `/admin roles` warns you if it isn't. In FE-Buddy that's the **Bot** role: it has no permissions, gives the bot its name color, and sits at the top of the list so the bot can manage every role below it.
+
+FE-Buddy's roles, channels and permissions are managed with [discord-iac](../tools/discord-iac/README.md) from a `desired.yaml` kept locally (it's git-ignored). Change them there rather than by hand, so the file stays the record. The tool uses the bot's token, and a bot can only grant permissions it has, so for changes that grant anything beyond the list above, turn on Administrator for the **Bot** role while you run `apply`, then turn it off.
 
 Discord never lets bots change the **server owner's** nickname; the bot skips the owner on purpose.
 
@@ -69,11 +80,11 @@ Discord apps sometimes keep old command permissions cached for a few minutes; re
 ## AIRAC pings
 The bot pings a role when the next AIRAC cycle's d-TPP MetaFile is out (see [Automatic Events](Bot%20Commands/Discord%20Event%20Commands.md#next-airac-metafile-ping)).
 
-1. **Role:** create **NextAiracNotifications**, below the bot's role. Either turn on "Allow anyone to @mention this role", or give the bot **Mention @everyone, @here, and All Roles** in the channel below.
-2. **Channel:** create **#next-airac-notifications** at the top of the server. @everyone: View Channel and Read Message History, deny Send Messages. The bot: View Channel and Send Messages.
+1. **Role:** create **AIRAC Notifications**, below the bot's role. The bot can ping it through its **Mention @everyone, @here, and All Roles** permission, so it doesn't need to be mentionable.
+2. **Channel:** create **#next-airac-notifications** where everyone can read it but members can't post. In FE-Buddy it's in the **Info** category, which only allows @everyone **View Channel**; nobody but Admin and the bot gets **Send Messages** there, so it needs no overwrites of its own.
 3. **Tell the bot**, in #admin-chat:
    ```
-   /admin roles airac-pings:@NextAiracNotifications
+   /admin roles airac-pings:@AIRAC Notifications
    /admin channels airac-pings:#next-airac-notifications
    /admin airac-check times:1500z, 2100z
    ```
@@ -82,34 +93,38 @@ The bot pings a role when the next AIRAC cycle's d-TPP MetaFile is out (see [Aut
 
 Verified members get the role the next time the bot checks their roles (`/give-role` or connecting to voice). To give it to everyone now, run `/staff check-users mode:Add roles` (run **Report only** first to preview).
 
+## Bot log channel
+The bot posts what it does, and any errors, in a private channel, and pings a role when something goes wrong (see [Admin Commands](Bot%20Commands/Admin%20User%20Commands.md#bot-logs)).
+
+1. **Role:** create a role for the people who should be pinged, e.g. **Bot Alerts**, and give it to them. It doesn't need any permissions or to be mentionable. A separate role lets someone keep seeing the channel without the pings.
+2. **Channel:** create **#bot-logs** in the private **Discord Admins** category, so only Admin and the bot can see it. Members shouldn't post there.
+3. **Tell the bot**, in #admin-chat:
+   ```
+   /admin logs channel:#bot-logs alert-role:@Bot Alerts
+   ```
+   It warns you if it can't post or ping there, or if everyone can see the channel.
+
 ## Issue reporting
 Members report FE-BUDDY issues from Discord. Set up the [GitHub App](GitHub%20App%20Setup.md) first. How it works is described in [GitHub Issue Sync](GitHub%20Issue%20Sync.md).
 
-All the bot's permissions below are **channel permissions** (Edit Channel → Permissions). The bot's role needs nothing new server-wide.
+The bot's server-wide permissions ([Bot role](#bot-role)) cover everything it does here. The channels only need overwrites for who else may post. In FE-Buddy both channels are in the **FE-BUDDY Issues** category, which only Verified members can see.
 
 ### 1. Forum channel
 Create a **Forum** channel, e.g. `#fe-buddy-issues`. Forums need **Community** turned on (Server Settings → Enable Community).
 
 | Role | Allow | Deny |
 |---|---|---|
-| @everyone | View Channel, Read Message History | **Create Posts**, **Send Messages in Posts** |
+| @everyone | | **Create Posts** |
 | Verified | Send Messages in Posts | |
-| Buddy Helper (the bot) | View Channel, Create Posts, Send Messages in Posts, Manage Posts, **Manage Channel**, Embed Links, Attach Files, Read Message History | |
+| Buddy Helper (the bot) | Create Posts | |
 
-Only the bot creates posts, one per GitHub issue. It adds the forum's tags itself (that's what **Manage Channel** is for) and only it applies them, because GitHub's labels decide them.
+Only the bot creates posts, one per GitHub issue, so **Create Posts** is denied to @everyone and allowed back to the bot. It adds the forum's tags itself (with **Manage Channels**) and only it applies them, because GitHub's labels decide them.
 
 ### 2. Submit channel
-A text channel for the report buttons, e.g. `#submit-an-issue`.
-
-| Role | Allow | Deny |
-|---|---|---|
-| @everyone | View Channel, Read Message History, Use Application Commands | Send Messages |
-| Buddy Helper (the bot) | View Channel, Send Messages, Embed Links | |
+A text channel for the report buttons, e.g. `#submit-an-issue`. Same overwrites as the forum, plus **Verified: Send Messages**, so members can type `/report` there.
 
 ### 3. Approval channel
-A member's second submission within an hour waits for approval in a private channel. FE-Buddy uses **#admin-chat**. The bot needs View Channel, Send Messages, Embed Links, Attach Files and Read Message History there.
-
-To ping **@Admin**, either make the Admin role mentionable (Server Settings → Roles → Admin → "Allow anyone to @mention this role"), or give the bot **Mention @everyone, @here, and All Roles** in #admin-chat only. `/admin issues` warns you if it can't ping the role.
+A member's second submission within an hour waits for approval in a private channel. FE-Buddy uses **#admin-chat**, in the private **Discord Admins** category, where the bot's role is allowed **View Channel**. The approval message pings the approver role through the bot's **Mention @everyone, @here, and All Roles** permission. `/admin issues` warns you if it can't post or ping there.
 
 ### 4. Tell the bot
 In #admin-chat:

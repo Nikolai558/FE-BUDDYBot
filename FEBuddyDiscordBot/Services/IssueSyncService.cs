@@ -55,7 +55,7 @@ public sealed class IssueSyncService : BackgroundService
             {
                 // Check everything again next time rather than trusting "not modified".
                 _github.ForgetOpenIssuesETag();
-                _logger.LogWarning("Issues: sync with GitHub failed: {Error}", ex is GitHubException ? ex.Message : ex.ToString());
+                _logger.LogWarning(ex is GitHubException ? null : ex, "Issues: sync with GitHub failed: {Error}", ex.Message);
             }
         }
         while (await timer.WaitForNextTickAsync(stoppingToken));
@@ -116,7 +116,7 @@ public sealed class IssueSyncService : BackgroundService
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("Issues: syncing {What} failed: {Error}", what, ex is GitHubException ? ex.Message : ex.ToString());
+            _logger.LogWarning(ex is GitHubException ? null : ex, "Issues: syncing {What} failed: {Error}", what, ex.Message);
             return 1;
         }
     }
