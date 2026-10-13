@@ -387,7 +387,7 @@ public sealed class RoleAssignmentService
     }
 
     // One line per member, e.g.:
-    // Roles: nikolai558 (353684697651478528) VATUSA CID 1234567 ZLC | added: Verified | removed: none | kept: ARTCC STAFF | nickname: unchanged (server owner)
+    // Roles: nikolai558 (353684697651478528) VATUSA CID 1234567 ZLC | added: Verified | removed: none | kept: ARTCC Staff | nickname: unchanged (server owner)
     private void LogSummary(MemberCheck check, RoleAssignmentResult result, bool logUnchanged)
     {
         bool changed = result.Added.Count > 0 || result.Removed.Count > 0 || result.NicknameChanged;
