@@ -115,7 +115,7 @@ public sealed class IssueReplyService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Issues: couldn't copy message {MessageId} to GitHub: {Error}", message.Id, ex is GitHubException ? ex.Message : ex.ToString());
+            _logger.LogWarning(ex is GitHubException ? null : ex, "Issues: couldn't copy message {MessageId} to GitHub: {Error}", message.Id, ex.Message);
             try
             {
                 // Let the member know this one didn't reach GitHub.
