@@ -66,7 +66,7 @@ Only used the **first time** the bot starts with an empty database. It seeds the
 Names that can't be found are logged as a warning and left unset; set them with `/admin roles` or `/admin channels`.
 
 ### `Serilog`
-Logging goes to the console and to `logs/fe-buddy-bot<date>.log`, one file per day, kept for 31 days. Production logs at `Information`; development logs at `Debug`.
+Logging goes to the console and to `logs/fe-buddy-bot<date>.log`, one file per day, kept for 31 days. Production logs at `Information`; development logs at `Debug`. `Information` and above is also posted in the bot log channel, if one is set with `/admin logs`.
 
 ## Secrets
 
@@ -104,6 +104,7 @@ Server settings are stored in `data/febuddybot.db` (SQLite), one row per server.
 * `/admin channels`: choose the private meeting voice channel, the roles channel and the AIRAC pings channel
 * `/admin airac-check`: set the UTC times the bot checks for the next AIRAC MetaFile
 * `/admin issues`, `/admin dev-task-roles`: set up issue reporting (see [Discord Setup](Discord%20Setup.md#issue-reporting))
+* `/admin logs`: choose the bot log channel and the role pinged for errors
 
 Roles and channels are stored by ID, so renaming them in Discord doesn't break anything.
 

@@ -193,6 +193,27 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         });
     }
 
+    [SlashCommand("logs", "Choose the private channel for the bot's logs and the role pinged when something goes wrong.")]
+    public async Task SetLogsAsync(
+        [Summary("channel", "Private channel for the bot's logs"), ChannelTypes(ChannelType.Text)] ITextChannel? channel = null,
+        [Summary("alert-role", "Role pinged in the log channel when something goes wrong")] IRole? alertRole = null,
+        [Summary("turn-off", "Stop posting logs, or stop the pings")] BotLogSetting? turnOff = null)
+    {
+        GuildSettings updated = await _settings.UpdateAsync(s =>
+        {
+            if (turnOff == BotLogSetting.LogChannel) s.LogChannelId = null;
+            if (turnOff == BotLogSetting.AlertRole) s.AlertRoleId = null;
+            if (channel is not null) s.LogChannelId = channel.Id;
+            if (alertRole is not null) s.AlertRoleId = alertRole.Id;
+        });
+
+        _logger.LogInformation("Config: bot log settings updated by {User}", Context.User.Username);
+
+        List<string> warnings = BotLogProblems(updated);
+        string message = warnings.Count == 0 ? "Bot log settings updated." : "Bot log settings updated, but:\n" + string.Join("\n", warnings.Select(w => $"⚠️ {w}"));
+        await RespondAsync(message, embed: BuildSettingsEmbed(updated), ephemeral: true);
+    }
+
     [SlashCommand("issue-panel", "Post the report-an-issue buttons in the submit channel.")]
     public async Task PostIssuePanelAsync()
     {
@@ -275,6 +296,33 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
         return problems;
     }
 
+    /// <summary>Anything stopping the bot from posting logs or pinging the alert role, and whether non-admins can read them.</summary>
+    private List<string> BotLogProblems(GuildSettings s)
+    {
+        List<string> problems = [];
+        if (s.LogChannelId is not ulong channelId || Context.Guild.GetChannel(channelId) is not { } channel)
+        {
+            if (s.AlertRoleId is not null) problems.Add("The alert role is pinged in the log channel. Set one with `/admin logs channel:`.");
+            return problems;
+        }
+
+        ChannelPermissions has = Context.Guild.CurrentUser.GetPermissions(channel);
+        if (!has.ViewChannel || !has.SendMessages) problems.Add($"I need View Channel and Send Messages in <#{channelId}> to post logs.");
+
+        PermValue everyoneView = channel.GetPermissionOverwrite(Context.Guild.EveryoneRole)?.ViewChannel ?? PermValue.Inherit;
+        if (everyoneView == PermValue.Allow || (everyoneView == PermValue.Inherit && Context.Guild.EveryoneRole.Permissions.ViewChannel))
+        {
+            problems.Add($"Everyone can see <#{channelId}>. The logs include usernames, user IDs and errors, so keep it private to admins.");
+        }
+
+        if (s.AlertRoleId is ulong roleId && Context.Guild.GetRole(roleId) is { IsMentionable: false } role && !has.MentionEveryone)
+        {
+            problems.Add($"I can't ping {role.Mention}: make it mentionable, or give me **Mention @everyone, @here, and All Roles** in <#{channelId}>.");
+        }
+
+        return problems;
+    }
+
     private string RepliesSetting(GuildSettings s) => s.IssueReplyMode switch
     {
         IssueReplyMode.MirrorAll when !_options.MessageContentIntent =>
@@ -335,7 +383,19 @@ public sealed class AdminSlashCommands : InteractionModuleBase<SocketInteraction
                 $"Dev-task roles: {(s.DevTaskRoleIds is { Length: > 0 } ids ? string.Join(" ", ids.Select(id => Role(id))) : "⚠️ not set")}\n" +
                 $"Submissions per hour before approval: {s.IssueSubmissionsPerHour}\n" +
                 $"Replies to GitHub: {RepliesSetting(s)}")
-            .WithFooter("Change with /admin events, roles, channels, airac-check, issues, dev-task-roles")
+            .AddField("Bot logs",
+                $"Channel: {(s.LogChannelId is null ? "⬜ Off" : Channel(s.LogChannelId))}\n" +
+                $"Alert role (pinged for errors): {(s.AlertRoleId is null ? "⬜ Off" : Role(s.AlertRoleId))}")
+            .WithFooter("Change with /admin events, roles, channels, airac-check, issues, dev-task-roles, logs")
             .Build();
     }
+}
+
+public enum BotLogSetting
+{
+    [ChoiceDisplay("Log channel (stop posting logs)")]
+    LogChannel,
+
+    [ChoiceDisplay("Alert role (stop pinging)")]
+    AlertRole,
 }

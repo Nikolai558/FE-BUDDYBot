@@ -1,3 +1,4 @@
+using System.Reflection;
 using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Models;
 
@@ -100,12 +101,26 @@ public sealed class StartupService : IHostedService
             _logger.LogWarning("Startup: the bot is also in {GuildName} ({GuildId}), which it does not serve.", other.Name, other.Id);
         }
 
+        _logger.LogInformation("Startup: FE-Buddy bot {Version} is online", Version(typeof(StartupService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion));
+
         await _interactions.RegisterCommandsToGuildAsync(guild.Id, deleteMissing: true);
         _logger.LogInformation("Startup: registered slash commands in {GuildName}", guild.Name);
 
         if (!_settings.IsSeeded) await SeedSettingsAsync(guild);
 
         if (!string.IsNullOrWhiteSpace(_options.Status)) await _discord.SetCustomStatusAsync(_options.Status);
+    }
+
+    /// <summary>
+    /// The app version, plus the commit it was built from when known, e.g. "1.0.0 (abc1234)". The Docker image gets the
+    /// commit from the SOURCE_REVISION build argument; local builds get it from git.
+    /// </summary>
+    internal static string Version(string? informationalVersion)
+    {
+        if (string.IsNullOrWhiteSpace(informationalVersion)) return "(unknown version)";
+
+        string[] parts = informationalVersion.Split('+', 2);
+        return parts.Length == 2 && parts[1].Length > 0 ? $"{parts[0]} ({parts[1][..Math.Min(7, parts[1].Length)]})" : parts[0];
     }
 
     /// <summary>

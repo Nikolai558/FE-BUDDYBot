@@ -27,9 +27,9 @@ All of the bot's permissions go on its own role, **server-wide**, so it can do i
 | Permission | Used for |
 |---|---|
 | View Channels, Read Message History | Seeing every channel; reading messages for `/clear-messages` and issue replies |
-| Send Messages, Send Messages in Threads, Embed Links, Attach Files | AIRAC pings, issue posts and replies, approval requests, the issue panel |
+| Send Messages, Send Messages in Threads, Embed Links, Attach Files | AIRAC pings, issue posts and replies, approval requests, the issue panel, bot logs |
 | Add Reactions | The warning reaction on issue replies that couldn't be sent to GitHub |
-| Mention @everyone, @here, and All Roles | Pinging the AIRAC pings role and the approver role, which aren't mentionable |
+| Mention @everyone, @here, and All Roles | Pinging the AIRAC pings, approver and alert roles, which aren't mentionable |
 | Manage Messages | `/clear-messages` |
 | Manage Threads | Archiving, locking and editing issue posts |
 | Manage Channels | Adding the issue forum's tags |
@@ -92,6 +92,17 @@ The bot pings a role when the next AIRAC cycle's d-TPP MetaFile is out (see [Aut
 4. **Allow `/airac-pings`** under **Server Settings → Integrations → the bot**, e.g. in **#assign-my-roles** and **#next-airac-notifications**. The **Stop these pings** button works anywhere.
 
 Verified members get the role the next time the bot checks their roles (`/give-role` or connecting to voice). To give it to everyone now, run `/staff check-users mode:Add roles` (run **Report only** first to preview).
+
+## Bot log channel
+The bot posts what it does, and any errors, in a private channel, and pings a role when something goes wrong (see [Admin Commands](Bot%20Commands/Admin%20User%20Commands.md#bot-logs)).
+
+1. **Role:** create a role for the people who should be pinged, e.g. **Bot Alerts**, and give it to them. It doesn't need any permissions or to be mentionable. A separate role lets someone keep seeing the channel without the pings.
+2. **Channel:** create **#bot-logs** in the private **Discord Admins** category, so only Admin and the bot can see it. Members shouldn't post there.
+3. **Tell the bot**, in #admin-chat:
+   ```
+   /admin logs channel:#bot-logs alert-role:@Bot Alerts
+   ```
+   It warns you if it can't post or ping there, or if everyone can see the channel.
 
 ## Issue reporting
 Members report FE-BUDDY issues from Discord. Set up the [GitHub App](GitHub%20App%20Setup.md) first. How it works is described in [GitHub Issue Sync](GitHub%20Issue%20Sync.md).

@@ -78,4 +78,18 @@ Shows a role picker. The roles you pick can submit **Development tasks**. Everyo
 
 Posts the "Report an FE-BUDDY issue" message with one button per issue type in the submit channel. Run it again after changing the panel's text; delete the old copy yourself.
 
+## Bot Logs
+`/admin logs [channel] [alert-role] [turn-off]`
+
+Sets up the private channel where the bot posts what it does: commands run (and denied), role and nickname changes, issue sync, AIRAC pings, settings changes, warnings and errors. Debug logs and stack traces stay in the log files.
+* `channel`: the log channel. Keep it private to admins: the logs include usernames, user IDs and error messages.
+* `alert-role`: pinged in the log channel when something goes wrong (an error). Each kind of error pings at most once every 30 minutes; repeats are still posted, without the ping.
+* `turn-off`: **Log channel** stops posting logs; **Alert role** stops the pings.
+
+Logs are posted every few seconds, several lines per message, and repeats in a row are shown once with a count. While the bot is disconnected they wait and are posted when it reconnects (up to 500 lines). Each start posts `Startup: FE-Buddy bot <version> (<commit>) is online`, and each stop posts `The bot is shutting down`, so deploys show up there. The bot's token and anything that looks like a webhook URL or GitHub token are replaced with `[redacted]`.
+
+The reply warns you if the bot can't post in the channel, if everyone can see it, or if it can't ping the role. See [Discord Setup](../Discord%20Setup.md#bot-log-channel).
+
+Example: `/admin logs channel:#bot-logs alert-role:@Bot Alerts`
+
 ---

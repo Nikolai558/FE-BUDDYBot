@@ -5,7 +5,9 @@ COPY FEBuddyDiscordBot.csproj ./
 RUN dotnet restore
 
 COPY . ./
-RUN dotnet publish -c Release -o /app --no-restore
+# The commit being built (GitHub Actions passes it). The bot shows it in its "online" log line.
+ARG SOURCE_REVISION=""
+RUN dotnet publish -c Release -o /app --no-restore -p:SourceRevisionId=$SOURCE_REVISION
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app

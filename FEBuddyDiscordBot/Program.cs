@@ -2,6 +2,7 @@ using FEBuddyDiscordBot.DataAccess;
 using FEBuddyDiscordBot.Models;
 using FEBuddyDiscordBot.Services;
 using Serilog;
+using Serilog.Core;
 
 // Configuration comes from appsettings.json, appsettings.{Environment}.json, user-secrets (Development only),
 // and environment variables (e.g. Bot__Token), in that order.
@@ -93,11 +94,17 @@ builder.Services.AddSingleton<IssueReplyService>();
 builder.Services.AddSingleton<AiracStore>();
 builder.Services.AddSingleton<DtppMetafileApi>();
 
+// Bot log channel. ReadFrom.Services (above) adds the sink to Serilog.
+builder.Services.AddSingleton<DiscordLogSink>();
+builder.Services.AddSingleton<ILogEventSink>(services => services.GetRequiredService<DiscordLogSink>());
+
 // Background services, started in this order
 builder.Services.AddHostedService<StartupService>();
 builder.Services.AddHostedService<ConnectionWatchdog>();
 builder.Services.AddHostedService<StatusUpdateService>();
 builder.Services.AddHostedService<IssueSyncService>();
 builder.Services.AddHostedService<MetafileWatchService>();
+// Last, so it stops first and can still post while Discord is connected.
+builder.Services.AddHostedService<DiscordLogService>();
 
 builder.Build().Run();

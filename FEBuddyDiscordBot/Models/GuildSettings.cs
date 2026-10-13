@@ -56,6 +56,14 @@ public sealed record GuildSettings
 
     /// <summary>Which replies in issue posts become GitHub comments.</summary>
     public IssueReplyMode IssueReplyMode { get; set; } = IssueReplyMode.MirrorAll;
+
+    // Bot logs (see DiscordLogService)
+
+    /// <summary>Private channel the bot posts its logs in. Not set: logs only go to the console and the log files.</summary>
+    public ulong? LogChannelId { get; set; }
+
+    /// <summary>Role pinged in the log channel when something goes wrong.</summary>
+    public ulong? AlertRoleId { get; set; }
 }
 
 public enum IssueReplyMode

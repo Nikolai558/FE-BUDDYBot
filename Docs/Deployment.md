@@ -28,7 +28,7 @@ sudo docker compose up -d
 docker logs febuddybot --tail 30
 ```
 
-A healthy start logs `Startup: registered slash commands in FE-Buddy` followed by `Gateway: Ready`. On the first start it also logs `Database: seeded settings…`, with a warning for any role or channel in `GuildDefaults` it couldn't find.
+A healthy start logs `Startup: FE-Buddy bot 1.0.0 (abc1234) is online` (the commit the image was built from), `Startup: registered slash commands in FE-Buddy` and `Gateway: Ready`. The two `Startup:` lines also show in the bot log channel, if one is set. On the first start it also logs `Database: seeded settings…`, with a warning for any role or channel in `GuildDefaults` it couldn't find.
 
 ## Common commands
 Run these from `/home/febuddybot/bot`.
