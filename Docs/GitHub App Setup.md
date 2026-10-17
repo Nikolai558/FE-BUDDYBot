@@ -56,10 +56,8 @@ The bot finds the installation by itself; you don't need the installation ID.
 ### Production server
 1. Copy the key to the server, into the bot's folder, named exactly `github-app.pem`:
    ```bash
-   sudo mkdir -p /home/febuddybot/bot/secrets
-   sudo mv ~/fe-buddy-bot.*.private-key.pem /home/febuddybot/bot/secrets/github-app.pem
-   sudo chown 1654:1654 /home/febuddybot/bot/secrets/github-app.pem
-   sudo chmod 400 /home/febuddybot/bot/secrets/github-app.pem
+   sudo install -m 400 -o 1654 ~/fe-buddy-bot.*.private-key.pem /opt/stacks/febuddybot/secrets/github-app.pem
+   rm ~/fe-buddy-bot.*.private-key.pem
    ```
 2. Add to `bot.env`:
    ```

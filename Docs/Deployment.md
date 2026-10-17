@@ -8,49 +8,53 @@ The server never builds the bot; it just pulls the image. Pull requests run the 
 
 ## Server layout
 ```
-/home/febuddybot/bot/
-├── docker-compose.yml   copied from FEBuddyDiscordBot/docker-compose.yml
-├── bot.env              secrets (root only: chmod 600)
-├── data/                SQLite settings database (owned by UID 1654)
-└── logs/                log files, kept for 31 days (owned by UID 1654)
+/opt/stacks/febuddybot/      root:docker 750
+├── docker-compose.yml       copied from FEBuddyDiscordBot/docker-compose.yml (root:docker 640)
+├── bot.env                  secrets (root:docker 640)
+├── data/                    SQLite settings database (UID 1654 only, 700)
+├── logs/                    log files, kept for 31 days (UID 1654 only, 700)
+└── secrets/                 GitHub App private key (UID 1654 only, 500; key file 400)
 ```
 
-The container runs as a non-root user (UID 1654), so `data/` and `logs/` must be owned by that UID.
+The container runs as a non-root user (UID 1654, the `febuddybot` user on the server), so `data/`, `logs/` and `secrets/` must be owned by that UID. Members of the `docker` group can run `docker compose` here without sudo, but can't read the data folders; use sudo for that.
+
+The container's filesystem is read-only and it runs with no extra privileges (see `docker-compose.yml`). It joins the shared `monitoring` network so its heartbeat reaches Uptime Kuma at `http://uptime-kuma:3001`.
 
 ## First-time setup
 ```
-sudo mkdir -p /home/febuddybot/bot && cd /home/febuddybot/bot
+sudo install -d -m 750 -o root -g docker /opt/stacks/febuddybot && cd /opt/stacks/febuddybot
 # copy docker-compose.yml and bot.env.example from FEBuddyDiscordBot/ in the repository
-sudo cp bot.env.example bot.env && sudo chmod 600 bot.env
+sudo cp bot.env.example bot.env && sudo chown root:docker bot.env && sudo chmod 640 bot.env
 sudo nano bot.env                      # fill in Bot__Token (see Configuration.md)
-sudo mkdir -p data logs && sudo chown -R 1654:1654 data logs
-sudo docker compose up -d
+sudo install -d -m 700 -o 1654 data logs && sudo install -d -m 500 -o 1654 secrets
+docker network inspect monitoring >/dev/null 2>&1 || docker network create monitoring
+docker compose up -d
 docker logs febuddybot --tail 30
 ```
 
 A healthy start logs `Startup: FE-Buddy bot 1.0.0 (abc1234) is online` (the commit the image was built from), `Startup: registered slash commands in FE-Buddy` and `Gateway: Ready`. The two `Startup:` lines also show in the bot log channel, if one is set. On the first start it also logs `Database: seeded settings…`, with a warning for any role or channel in `GuildDefaults` it couldn't find.
 
 ## Common commands
-Run these from `/home/febuddybot/bot`.
+Run these from `/opt/stacks/febuddybot` as a member of the `docker` group.
 
     Update to the newest image:
-        sudo docker compose pull
-        sudo docker compose up -d
+        docker compose pull
+        docker compose up -d
 
     Roll back to an older build:
         edit docker-compose.yml: change ":latest" to ":sha-xxxxxxx"
         (tags are listed on the package page on GitHub), then
-        sudo docker compose up -d
+        docker compose up -d
 
     Apply changes to bot.env:
-        sudo docker compose up -d --force-recreate
+        docker compose up -d --force-recreate
 
     Restart:
-        sudo docker compose restart
+        docker compose restart
 
     Stop / start:
-        sudo docker compose down
-        sudo docker compose up -d
+        docker compose down
+        docker compose up -d
 
     Recent logs:
         docker logs febuddybot --tail 100
@@ -58,19 +62,10 @@ Run these from `/home/febuddybot/bot`.
     Follow logs live:
         docker logs -f febuddybot
 
-## Current Linode: old docker-compose
-The current server has the old standalone `docker-compose` 1.29, not `docker compose`. On it:
-
-    Update:
-        sudo docker-compose -p febuddybot pull
-        sudo docker-compose -p febuddybot down
-        sudo docker-compose -p febuddybot up -d
-
-* **Always run `down` before `up -d`.** docker-compose 1.29 crashes with `KeyError: 'ContainerConfig'` when it tries to recreate a running container on Docker Engine 25+. If that happens, the old container is left stopped and renamed; `down` then `up -d` fixes it.
-* **Always pass `-p febuddybot`.** Otherwise it names the project after the folder (`bot`) and tries to create a second container with the same name.
+The server reboots itself at 01:00 (America/Los_Angeles) when a security update needs it. `restart: unless-stopped` brings the bot back afterwards, and Uptime Kuma alerts if the heartbeat stops.
 
 ## Backups
-The only data is `data/febuddybot.db` (the server settings). Copy it somewhere safe. To restore, stop the bot, put the file back, and start it again.
+The only data is `data/febuddybot.db` (the server settings). Copy it somewhere safe (`sudo` is needed to read it). To restore, stop the bot, put the file back owned by UID 1654, and start it again.
 
 ## Troubleshooting
 | In the log | Cause | Fix |
