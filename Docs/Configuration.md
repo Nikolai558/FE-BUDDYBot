@@ -71,7 +71,7 @@ Logging goes to the console and to `logs/fe-buddy-bot<date>.log`, one file per d
 ## Secrets
 
 ### Production (`bot.env`)
-Copy [`bot.env.example`](../FEBuddyDiscordBot/bot.env.example) to `bot.env` next to `docker-compose.yml` and fill it in. Keep it readable by root only (`chmod 600`).
+Copy [`bot.env.example`](../FEBuddyDiscordBot/bot.env.example) to `bot.env` next to `docker-compose.yml` and fill it in. Keep it readable by root and the `docker` group only (`root:docker`, `chmod 640`).
 
 ```
 Bot__Token=...

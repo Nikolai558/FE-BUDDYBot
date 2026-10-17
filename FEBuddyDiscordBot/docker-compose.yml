@@ -6,13 +6,26 @@ services:
     image: ghcr.io/nikolai558/fe-buddybot:latest
     container_name: febuddybot
     restart: unless-stopped
-    # Secrets: copy bot.env.example to bot.env next to this file and fill it in. Keep bot.env readable by root only.
+    # Secrets: copy bot.env.example to bot.env next to this file and fill it in. See Docs/Deployment.md for permissions.
     env_file: bot.env
     volumes:
-      # The container runs as a non-root user (UID 1654); these folders must be writable by it:
-      #   sudo chown -R 1654:1654 data logs
+      # The container runs as a non-root user (UID 1654); these folders must be owned by it:
+      #   sudo chown -R 1654 data logs
       - ./data:/app/data
       - ./logs:/app/logs
       # GitHub App private key (read-only). Only needed for issue reporting:
-      #   sudo chown 1654:1654 secrets/github-app.pem && sudo chmod 400 secrets/github-app.pem
+      #   sudo chown 1654 secrets/github-app.pem && sudo chmod 400 secrets/github-app.pem
       - ./secrets:/app/secrets:ro
+    # Hardening: the image can't be changed at runtime, and the process gets no extra privileges.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    # "monitoring" is shared with Uptime Kuma, so the heartbeat reaches http://uptime-kuma:3001
+    # without leaving the server. Create it once with: docker network create monitoring
+    networks: [default, monitoring]
+
+networks:
+  monitoring:
+    external: true
