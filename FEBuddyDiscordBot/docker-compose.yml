@@ -22,6 +22,10 @@ services:
       - /tmp
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
+    # Resource caps: a leak or runaway loop kills and restarts only this container, instead of
+    # starving the rest of the server (SSH, Docker, other services). Normal use is under 100 MB.
+    mem_limit: 512m
+    pids_limit: 200
     # "monitoring" is shared with Uptime Kuma, so the heartbeat reaches http://uptime-kuma:3001
     # without leaving the server. Create it once with: docker network create monitoring
     networks: [default, monitoring]

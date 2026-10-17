@@ -18,7 +18,7 @@ The server never builds the bot; it just pulls the image. Pull requests run the 
 
 The container runs as a non-root user (UID 1654, the `febuddybot` user on the server), so `data/`, `logs/` and `secrets/` must be owned by that UID. Members of the `docker` group can run `docker compose` here without sudo, but can't read the data folders; use sudo for that.
 
-The container's filesystem is read-only and it runs with no extra privileges (see `docker-compose.yml`). It joins the shared `monitoring` network so its heartbeat reaches Uptime Kuma at `http://uptime-kuma:3001`.
+The container's filesystem is read-only, it runs with no extra privileges, and it is capped at 512 MB of memory and 200 processes (see `docker-compose.yml`). If it hits the memory cap, only the bot is killed and Docker restarts it. It joins the shared `monitoring` network so its heartbeat reaches Uptime Kuma at `http://uptime-kuma:3001`.
 
 ## First-time setup
 ```
